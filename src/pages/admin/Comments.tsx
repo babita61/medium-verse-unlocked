@@ -42,7 +42,7 @@ const AdminComments = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as Comment[];
+      return data as (Comment & { post: { title: string, slug: string } })[];
     },
     enabled: !!profile && profile.role === "admin",
   });
@@ -138,10 +138,10 @@ const AdminComments = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <a
-                          href={`/post/${comment.post?.slug}`}
+                          href={`/post/${comment.post?.slug || ''}`}
                           className="text-sm text-blue-600 hover:underline"
                         >
-                          {comment.post?.title}
+                          {comment.post?.title || 'Unknown post'}
                         </a>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

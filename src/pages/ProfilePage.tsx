@@ -145,7 +145,7 @@ const ProfilePage = () => {
                   key={bookmark.id}
                   post={{
                     ...bookmark.post,
-                    category: bookmark.post.category,
+                    category: bookmark.post.category?.name || '',
                     authorName:
                       bookmark.post.author?.full_name ||
                       bookmark.post.author?.username ||

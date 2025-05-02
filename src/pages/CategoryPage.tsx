@@ -89,7 +89,7 @@ const CategoryPage = () => {
               {posts.map((post) => (
                 <PostCard key={post.id} post={{
                   ...post,
-                  category: category,
+                  category: category?.name || '',
                   authorName: post.author?.full_name || post.author?.username || 'Unknown',
                   authorAvatar: post.author?.avatar_url || undefined,
                   createdAt: new Date(post.created_at).toISOString(),
