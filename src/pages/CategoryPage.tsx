@@ -71,7 +71,7 @@ const CategoryPage = () => {
       <Navbar />
       <main className="flex-grow py-10">
         <div className="container-blog">
-          <div className={`mb-10 p-6 rounded-lg bg-category-${slug}`}>
+          <div className={`mb-10 p-6 rounded-lg bg-gray-50`}>
             <h1 className="text-3xl font-serif font-bold">{category?.name}</h1>
             {category?.description && (
               <p className="mt-2 text-lg opacity-90">{category.description}</p>
