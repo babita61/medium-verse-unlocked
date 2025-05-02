@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -48,7 +48,7 @@ const CreateEditPost = () => {
   });
 
   // If editing, fetch post data
-  useQuery({
+  const { data: postData } = useQuery({
     queryKey: ['edit-post', postId],
     queryFn: async () => {
       if (!postId) return null;
@@ -63,20 +63,22 @@ const CreateEditPost = () => {
       return data;
     },
     enabled: isEditing,
-    onSuccess: (data) => {
-      if (!data) return;
-      
-      setTitle(data.title);
-      setSlug(data.slug);
-      setContent(data.content);
-      setExcerpt(data.excerpt || '');
-      setCoverImage(data.cover_image || '');
-      setCategoryId(data.category_id || '');
-      setReadTime(data.read_time);
-      setPublished(data.published);
-      setFeatured(data.featured);
-    }
   });
+  
+  // Use useEffect to set form data when postData is available
+  useEffect(() => {
+    if (postData) {
+      setTitle(postData.title);
+      setSlug(postData.slug);
+      setContent(postData.content);
+      setExcerpt(postData.excerpt || '');
+      setCoverImage(postData.cover_image || '');
+      setCategoryId(postData.category_id || '');
+      setReadTime(postData.read_time);
+      setPublished(postData.published);
+      setFeatured(postData.featured);
+    }
+  }, [postData]);
 
   // Create or update post mutation
   const mutation = useMutation({
@@ -210,7 +212,6 @@ const CreateEditPost = () => {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Uncategorized</SelectItem>
                     {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
