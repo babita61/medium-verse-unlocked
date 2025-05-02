@@ -94,6 +94,7 @@ const CategoryPage = () => {
                   authorAvatar: post.author?.avatar_url || undefined,
                   createdAt: new Date(post.created_at).toISOString(),
                   readTime: post.read_time,
+                  coverImage: post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d'
                 }} />
               ))}
             </div>

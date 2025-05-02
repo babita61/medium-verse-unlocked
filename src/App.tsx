@@ -16,6 +16,7 @@ import AdminPosts from "./pages/admin/Posts";
 import AdminCategories from "./pages/admin/Categories";
 import AdminComments from "./pages/admin/Comments";
 import ProfilePage from "./pages/ProfilePage";
+import CreateEditPost from "./pages/admin/CreateEditPost";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,8 @@ const App = () => (
             {/* Admin routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/posts" element={<AdminPosts />} />
+            <Route path="/admin/posts/create" element={<CreateEditPost />} />
+            <Route path="/admin/posts/:postId/edit" element={<CreateEditPost />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/comments" element={<AdminComments />} />
             

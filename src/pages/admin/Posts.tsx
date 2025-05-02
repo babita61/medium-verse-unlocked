@@ -5,12 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Post } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Edit, Trash2 } from "lucide-react";
 
 const AdminPosts = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: profile } = useQuery({
     queryKey: ["admin-profile", user?.id],
@@ -29,7 +32,7 @@ const AdminPosts = () => {
     enabled: !!user,
   });
 
-  const { data: posts, isLoading: postsLoading } = useQuery({
+  const { data: posts, isLoading: postsLoading, refetch } = useQuery({
     queryKey: ["admin-posts"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -52,6 +55,41 @@ const AdminPosts = () => {
       navigate("/");
     }
   }, [authLoading, user, profile, navigate]);
+
+  const handleCreatePost = () => {
+    navigate("/admin/posts/create");
+  };
+
+  const handleEditPost = (postId: string) => {
+    navigate(`/admin/posts/${postId}/edit`);
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (confirm("Are you sure you want to delete this post?")) {
+      try {
+        const { error } = await supabase
+          .from("posts")
+          .delete()
+          .eq("id", postId);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Post deleted successfully",
+        });
+        
+        refetch();
+        
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   if (authLoading || !profile || profile.role !== "admin") {
     return (
@@ -84,6 +122,7 @@ const AdminPosts = () => {
 
           <div className="mb-6">
             <button
+              onClick={handleCreatePost}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
               Create New Post
@@ -153,16 +192,27 @@ const AdminPosts = () => {
                         >
                           {post.published ? "Published" : "Draft"}
                         </span>
+                        {post.featured && (
+                          <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                            Featured
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(post.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          Edit
+                        <button 
+                          onClick={() => handleEditPost(post.id)}
+                          className="text-blue-600 hover:text-blue-900 mr-3 inline-flex items-center"
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Edit
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          Delete
+                        <button 
+                          onClick={() => handleDeletePost(post.id)}
+                          className="text-red-600 hover:text-red-900 inline-flex items-center"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </button>
                       </td>
                     </tr>

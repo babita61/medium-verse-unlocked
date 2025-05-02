@@ -8,6 +8,13 @@ import { Comment } from "@/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+interface CommentWithPost extends Comment {
+  post?: {
+    title: string;
+    slug: string;
+  };
+}
+
 const AdminComments = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +49,7 @@ const AdminComments = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as (Comment & { post: { title: string, slug: string } })[];
+      return data as CommentWithPost[];
     },
     enabled: !!profile && profile.role === "admin",
   });
@@ -98,13 +105,13 @@ const AdminComments = () => {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      Comment
+                      User
                     </th>
                     <th
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      User
+                      Content
                     </th>
                     <th
                       scope="col"
@@ -118,6 +125,12 @@ const AdminComments = () => {
                     >
                       Date
                     </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Status
+                    </th>
                     <th scope="col" className="relative px-6 py-3">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -126,14 +139,27 @@ const AdminComments = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {comments.map((comment) => (
                     <tr key={comment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 overflow-hidden">
+                            {comment.user?.avatar_url && (
+                              <img
+                                src={comment.user.avatar_url}
+                                alt={comment.user?.username}
+                                className="h-full w-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {comment.user?.username}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 max-w-xs truncate">
                           {comment.content}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {comment.user?.username}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -147,13 +173,22 @@ const AdminComments = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(comment.created_at).toLocaleDateString()}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            comment.reported
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {comment.reported ? "Reported" : "Normal"}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {comment.reported && (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 mr-2">
-                            Reported
-                          </span>
-                        )}
-                        <button className="text-red-600 hover:text-red-900 ml-3">
+                        <button className="text-blue-600 hover:text-blue-900 mr-3">
+                          View
+                        </button>
+                        <button className="text-red-600 hover:text-red-900">
                           Delete
                         </button>
                       </td>
