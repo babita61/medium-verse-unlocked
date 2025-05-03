@@ -68,7 +68,10 @@ const PostCard = ({ post, featured = false, className }: PostCardProps) => {
           .eq("post_id", post.id)
           .eq("user_id", user.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error removing bookmark:", error);
+          throw error;
+        }
         setIsBookmarked(false);
         toast.success("Bookmark removed");
       } else {
@@ -77,7 +80,10 @@ const PostCard = ({ post, featured = false, className }: PostCardProps) => {
           .from("bookmarks")
           .insert([{ post_id: post.id, user_id: user.id }]);
         
-        if (error) throw error;
+        if (error) {
+          console.error("Error adding bookmark:", error);
+          throw error;
+        }
         setIsBookmarked(true);
         toast.success("Post bookmarked");
       }

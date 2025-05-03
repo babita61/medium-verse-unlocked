@@ -1,4 +1,5 @@
 
+// Updating only the toggleBookmarkMutation part in PostPage.tsx to ensure it correctly handles errors and provides feedback
 import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -168,7 +169,10 @@ const PostPage = () => {
           .eq("post_id", post.id)
           .eq("user_id", user.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error removing bookmark:", error);
+          throw error;
+        }
         return false;
       } else {
         // Add bookmark
@@ -181,7 +185,10 @@ const PostPage = () => {
             },
           ]);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error adding bookmark:", error);
+          throw error;
+        }
         return true;
       }
     },

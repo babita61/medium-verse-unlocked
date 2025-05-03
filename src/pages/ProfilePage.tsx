@@ -149,9 +149,11 @@ const ProfilePage = () => {
                 <PostCard
                   key={bookmark.id}
                   post={{
-                    ...bookmark.post,
                     id: bookmark.post.id,
-                    category: bookmark.post.category?.name || '',
+                    title: bookmark.post.title,
+                    excerpt: bookmark.post.excerpt || bookmark.post.content?.substring(0, 150) + "..." || "",
+                    coverImage: bookmark.post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
+                    category: bookmark.post.category?.name || 'Uncategorized',
                     authorName:
                       bookmark.post.author?.full_name ||
                       bookmark.post.author?.username ||
@@ -159,10 +161,7 @@ const ProfilePage = () => {
                     authorAvatar: bookmark.post.author?.avatar_url,
                     createdAt: new Date(bookmark.post.created_at).toISOString(),
                     readTime: bookmark.post.read_time,
-                    coverImage: bookmark.post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
-                    excerpt: bookmark.post.excerpt || '',
                     slug: bookmark.post.slug,
-                    title: bookmark.post.title
                   }}
                 />
               ))}
