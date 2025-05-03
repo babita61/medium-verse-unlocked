@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +11,26 @@ const AdminCategories = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [newCategory, setNewCategory] = useState({ name: "", slug: "", description: "" });
+  const handleNewCategoryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setNewCategory({ ...newCategory, [e.target.name]: e.target.value });
+  };
+  const createMutation = useMutation({
+    mutationFn: async (category: typeof newCategory) => {
+      const { error } = await supabase.from("categories").insert([category]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      setNewCategory({ name: "", slug: "", description: "" });
+    },
+  });
+  const handleCreateCategory = () => {
+    if (newCategory.name && newCategory.slug) {
+      createMutation.mutate(newCategory);
+    }
+  };
+    
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
@@ -57,6 +77,16 @@ const AdminCategories = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+    },
+  });
+
   const handleEditClick = (category: Category) => {
     setEditingCategory(category);
     setForm({
@@ -66,7 +96,9 @@ const AdminCategories = () => {
     });
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -79,7 +111,7 @@ const AdminCategories = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!authLoading && (!user || (profile && profile.role !== "admin"))) {
       navigate("/");
     }
@@ -100,20 +132,59 @@ const AdminCategories = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-grow py-10">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Manage Categories</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Manage Categories</h1>
             <button
               onClick={() => navigate("/admin")}
-              className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-gray-700"
+              className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded text-sm text-gray-700 shadow"
             >
               Back to Dashboard
             </button>
           </div>
-
+  
+          {/* Add New Category */}
+          <div className="bg-white shadow rounded-lg p-6 mb-10 border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Add New Category</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                name="name"
+                placeholder="Name"
+                value={newCategory.name}
+                onChange={handleNewCategoryChange}
+                className="px-4 py-2 border rounded focus:ring-2 focus:ring-green-300"
+              />
+              <input
+                type="text"
+                name="slug"
+                placeholder="Slug"
+                value={newCategory.slug}
+                onChange={handleNewCategoryChange}
+                className="px-4 py-2 border rounded focus:ring-2 focus:ring-green-300"
+              />
+              <textarea
+                name="description"
+                placeholder="Description"
+                value={newCategory.description}
+                onChange={handleNewCategoryChange}
+                className="col-span-full px-4 py-2 border rounded focus:ring-2 focus:ring-green-300"
+              />
+            </div>
+            <div className="mt-6 text-right">
+              <button
+                onClick={handleCreateCategory}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium shadow"
+              >
+                Add Category
+              </button>
+            </div>
+          </div>
+  
+          {/* Categories Table */}
           {categoriesLoading ? (
             <div className="animate-pulse space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -121,30 +192,41 @@ const AdminCategories = () => {
               ))}
             </div>
           ) : categories && categories.length > 0 ? (
-            <div className="bg-white shadow overflow-hidden rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="bg-white shadow overflow-hidden rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-100">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Slug</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Description</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-600 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {categories.map((category) => (
-                    <tr key={category.id}>
-                      <td className="px-6 py-4 text-sm text-gray-900">{category.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{category.slug}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{category.description || "—"}</td>
-                      <td className="px-6 py-4 text-right text-sm">
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {categories.map((category, index) => (
+                    <tr key={category.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-800">{category.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{category.slug}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {category.description || <span className="italic text-gray-400">—</span>}
+                      </td>
+                      <td className="px-6 py-4 text-right text-sm space-x-3">
                         <button
-                          className="text-blue-600 hover:text-blue-900 mr-3"
+                          className="text-blue-600 hover:text-blue-800 font-medium"
                           onClick={() => handleEditClick(category)}
                         >
                           Edit
                         </button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
+                        <button
+                          className="text-red-600 hover:text-red-800 font-medium"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this category?")) {
+                              deleteMutation.mutate(category.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -152,16 +234,16 @@ const AdminCategories = () => {
               </table>
             </div>
           ) : (
-            <div className="bg-white shadow rounded-lg p-6 text-center">
-              <p className="text-gray-500">No categories found. Create your first category!</p>
+            <div className="bg-white shadow rounded-lg p-6 text-center text-gray-600 border border-gray-200">
+              No categories found. Create your first category!
             </div>
           )}
-
-          {/* Edit Form Modal-ish */}
+  
+          {/* Edit Modal */}
           {editingCategory && (
-            <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">Edit Category</h2>
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md border border-gray-300">
+                <h2 className="text-xl font-bold mb-4 text-gray-700">Edit Category</h2>
                 <div className="space-y-4">
                   <input
                     type="text"
@@ -169,7 +251,7 @@ const AdminCategories = () => {
                     placeholder="Name"
                     value={form.name}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2 border rounded"
+                    className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300"
                   />
                   <input
                     type="text"
@@ -177,26 +259,26 @@ const AdminCategories = () => {
                     placeholder="Slug"
                     value={form.slug}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2 border rounded"
+                    className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300"
                   />
                   <textarea
                     name="description"
                     placeholder="Description"
                     value={form.description}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-2 border rounded"
+                    className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-300"
                   />
                 </div>
-                <div className="mt-6 flex justify-end space-x-2">
+                <div className="mt-6 flex justify-end gap-3">
                   <button
                     onClick={() => setEditingCategory(null)}
-                    className="bg-gray-300 hover:bg-gray-400 px-4 py-2 rounded"
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded shadow-sm"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUpdate}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
                   >
                     Save
                   </button>
@@ -209,6 +291,7 @@ const AdminCategories = () => {
       <Footer />
     </div>
   );
+  
 };
 
 export default AdminCategories;
