@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Image, Loader2 } from 'lucide-react';
 
 const CreateEditPost = () => {
   const { user } = useAuth();
@@ -32,6 +35,9 @@ const CreateEditPost = () => {
   const [readTime, setReadTime] = useState(5);
   const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Fetch categories for dropdown
   const { data: categories } = useQuery({
@@ -77,23 +83,86 @@ const CreateEditPost = () => {
       setReadTime(postData.read_time);
       setPublished(postData.published);
       setFeatured(postData.featured);
+      
+      if (postData.cover_image) {
+        setImagePreview(postData.cover_image);
+      }
     }
   }, [postData]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return coverImage;
+    
+    setUploadingImage(true);
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post_images')
+        .upload(filePath, imageFile);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage
+        .from('post_images')
+        .getPublicUrl(filePath);
+      
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload image",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Create or update post mutation
   const mutation = useMutation({
     mutationFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      let finalCoverImage = coverImage;
+      
+      // Upload image if a new one was selected
+      if (imageFile) {
+        const uploadedImageUrl = await uploadImage();
+        if (uploadedImageUrl) {
+          finalCoverImage = uploadedImageUrl;
+        }
+      }
+      
       const postData = {
         title,
         slug: slug || title.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-'),
         content,
         excerpt,
-        cover_image: coverImage,
+        cover_image: finalCoverImage,
         category_id: categoryId || null,
         read_time: readTime,
         published,
         featured,
-        author_id: user?.id
+        author_id: user.id
       };
       
       if (isEditing) {
@@ -123,7 +192,7 @@ const CreateEditPost = () => {
       queryClient.invalidateQueries({ queryKey: ['recent-posts'] });
       navigate('/admin/posts');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message,
@@ -250,14 +319,56 @@ const CreateEditPost = () => {
                 />
               </div>
               
-              <div className="grid gap-2">
-                <Label htmlFor="coverImage">Cover Image URL</Label>
-                <Input
-                  id="coverImage"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                />
+              <div className="grid gap-4">
+                <Label>Cover Image</Label>
+                <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                  <div className="flex-1">
+                    <Card className="border-dashed cursor-pointer hover:bg-gray-50 transition-colors">
+                      <CardContent className="p-6 flex justify-center items-center">
+                        <label className="cursor-pointer flex flex-col items-center">
+                          <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                            <Image className="h-6 w-6 text-gray-500" />
+                          </div>
+                          <span className="text-sm text-gray-500">Click to {imageFile || coverImage ? "change" : "upload"} image</span>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                      </CardContent>
+                    </Card>
+                    {!imageFile && (
+                      <div className="mt-2">
+                        <Label htmlFor="coverImageUrl">Or enter image URL</Label>
+                        <Input
+                          id="coverImageUrl"
+                          value={coverImage}
+                          onChange={(e) => setCoverImage(e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Preview */}
+                  {(imagePreview || coverImage) && (
+                    <div className="w-full md:w-1/3 aspect-video bg-gray-100 rounded-md overflow-hidden relative">
+                      {uploadingImage && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+                          <Loader2 className="h-8 w-8 text-white animate-spin" />
+                        </div>
+                      )}
+                      <img
+                        src={imagePreview || coverImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="grid gap-2">
@@ -293,7 +404,10 @@ const CreateEditPost = () => {
             </div>
             
             <div className="flex justify-end">
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={mutation.isPending || uploadingImage}
+              >
                 {mutation.isPending ? 'Saving...' : isEditing ? 'Update Post' : 'Create Post'}
               </Button>
             </div>

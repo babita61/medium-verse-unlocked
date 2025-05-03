@@ -1,14 +1,26 @@
 
-import React from "react";
+import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post, Comment } from "@/types";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/sonner";
+import { useAuth } from "@/context/AuthContext";
+import { Heart, MessageSquare, Bookmark, BookmarkCheck } from "lucide-react";
 
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [commentContent, setCommentContent] = useState("");
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
 
   const { data: post, isLoading: loadingPost } = useQuery({
     queryKey: ["post", slug],
@@ -28,6 +40,63 @@ const PostPage = () => {
       return data as Post;
     },
     enabled: !!slug,
+  });
+
+  // Check if the user has bookmarked this post
+  useQuery({
+    queryKey: ["post-bookmark", slug, user?.id],
+    queryFn: async () => {
+      if (!user || !post) return null;
+
+      const { data, error } = await supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("post_id", post.id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows returned
+      setIsBookmarked(!!data);
+      return data;
+    },
+    enabled: !!user && !!post,
+  });
+
+  // Check if the user has liked this post and get likes count
+  useQuery({
+    queryKey: ["post-reactions", slug, user?.id],
+    queryFn: async () => {
+      if (!post) return { userLiked: false, count: 0 };
+
+      // Get total likes count
+      const { count, error: countError } = await supabase
+        .from("reactions")
+        .select("id", { count: "exact", head: true })
+        .eq("post_id", post.id)
+        .eq("reaction_type", "like");
+
+      if (countError) throw countError;
+      
+      setLikesCount(count || 0);
+
+      // Check if user has liked the post
+      if (user) {
+        const { data, error } = await supabase
+          .from("reactions")
+          .select("id")
+          .eq("post_id", post.id)
+          .eq("user_id", user.id)
+          .eq("reaction_type", "like")
+          .single();
+
+        if (error && error.code !== "PGRST116") throw error;
+        setIsLiked(!!data);
+        return { userLiked: !!data, count: count || 0 };
+      }
+
+      return { userLiked: false, count: count || 0 };
+    },
+    enabled: !!post,
   });
 
   const { data: comments, isLoading: loadingComments } = useQuery({
@@ -50,6 +119,155 @@ const PostPage = () => {
     },
     enabled: !!post,
   });
+
+  // Mutation to add a comment
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user) throw new Error("You must be logged in to comment");
+      if (!post) throw new Error("Post not found");
+      if (!content.trim()) throw new Error("Comment cannot be empty");
+
+      const { error, data } = await supabase
+        .from("comments")
+        .insert([
+          {
+            post_id: post.id,
+            user_id: user.id,
+            content,
+          },
+        ])
+        .select(`
+          *,
+          user:profiles(*)
+        `);
+
+      if (error) throw error;
+      return data[0] as Comment;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["post-comments", slug] });
+      setCommentContent("");
+      toast.success("Comment added successfully");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to add comment");
+    },
+  });
+
+  // Mutation to toggle bookmark
+  const toggleBookmarkMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("You must be logged in to bookmark posts");
+      if (!post) throw new Error("Post not found");
+
+      if (isBookmarked) {
+        // Remove bookmark
+        const { error } = await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+        return false;
+      } else {
+        // Add bookmark
+        const { error } = await supabase
+          .from("bookmarks")
+          .insert([
+            {
+              post_id: post.id,
+              user_id: user.id,
+            },
+          ]);
+
+        if (error) throw error;
+        return true;
+      }
+    },
+    onSuccess: (bookmarked) => {
+      setIsBookmarked(bookmarked);
+      queryClient.invalidateQueries({ queryKey: ["post-bookmark", slug, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["user-bookmarks", user?.id] });
+      toast.success(bookmarked ? "Post bookmarked" : "Bookmark removed");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update bookmark");
+    },
+  });
+
+  // Mutation to toggle like
+  const toggleLikeMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("You must be logged in to like posts");
+      if (!post) throw new Error("Post not found");
+
+      if (isLiked) {
+        // Remove like
+        const { error } = await supabase
+          .from("reactions")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", user.id)
+          .eq("reaction_type", "like");
+
+        if (error) throw error;
+        return false;
+      } else {
+        // Add like
+        const { error } = await supabase
+          .from("reactions")
+          .insert([
+            {
+              post_id: post.id,
+              user_id: user.id,
+              reaction_type: "like",
+            },
+          ]);
+
+        if (error) throw error;
+        return true;
+      }
+    },
+    onSuccess: (liked) => {
+      setIsLiked(liked);
+      setLikesCount(prev => liked ? prev + 1 : prev - 1);
+      queryClient.invalidateQueries({ queryKey: ["post-reactions", slug, user?.id] });
+      toast.success(liked ? "Post liked" : "Like removed");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update like");
+    },
+  });
+
+  const handleAddComment = () => {
+    if (commentContent.trim()) {
+      addCommentMutation.mutate(commentContent);
+    } else {
+      toast.error("Comment cannot be empty");
+    }
+  };
+
+  const handleToggleBookmark = () => {
+    if (!user) {
+      toast.error("Please sign in to bookmark posts");
+      return;
+    }
+    toggleBookmarkMutation.mutate();
+  };
+
+  const handleToggleLike = () => {
+    if (!user) {
+      toast.error("Please sign in to like posts");
+      return;
+    }
+    toggleLikeMutation.mutate();
+  };
+
+  const scrollToComments = () => {
+    commentInputRef.current?.scrollIntoView({ behavior: "smooth" });
+    commentInputRef.current?.focus();
+  };
 
   if (loadingPost) {
     return (
@@ -103,6 +321,37 @@ const PostPage = () => {
                 {post.category ? post.category.name : "Uncategorized"}
               </span>
             </div>
+
+            {/* Engagement buttons */}
+            <div className="flex items-center gap-5 mb-4">
+              <button 
+                onClick={handleToggleLike}
+                className={`flex items-center gap-1 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}
+              >
+                <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-500' : 'fill-none'}`} />
+                <span>{likesCount}</span>
+              </button>
+              
+              <button 
+                onClick={scrollToComments}
+                className="flex items-center gap-1 text-gray-500 hover:text-blue-500"
+              >
+                <MessageSquare className="h-5 w-5" />
+                <span>{comments?.length || 0}</span>
+              </button>
+              
+              <button 
+                onClick={handleToggleBookmark}
+                className={`flex items-center gap-1 ${isBookmarked ? 'text-blue-500' : 'text-gray-500'} hover:text-blue-500`}
+              >
+                {isBookmarked ? (
+                  <BookmarkCheck className="h-5 w-5" />
+                ) : (
+                  <Bookmark className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+
             {post.cover_image && (
               <div className="aspect-video w-full mb-6 rounded-lg overflow-hidden">
                 <img
@@ -124,6 +373,29 @@ const PostPage = () => {
 
           <div className="mt-10 pt-8 border-t border-gray-200">
             <h3 className="text-xl font-bold mb-6">Comments</h3>
+            
+            {user ? (
+              <div className="mb-8">
+                <Textarea
+                  ref={commentInputRef}
+                  placeholder="Add your comment..."
+                  className="min-h-28 mb-2"
+                  value={commentContent}
+                  onChange={(e) => setCommentContent(e.target.value)}
+                />
+                <Button 
+                  onClick={handleAddComment} 
+                  disabled={addCommentMutation.isPending || !commentContent.trim()}
+                >
+                  {addCommentMutation.isPending ? "Posting..." : "Post Comment"}
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-md mb-8">
+                <p className="text-gray-600">Please sign in to leave a comment.</p>
+              </div>
+            )}
+            
             {loadingComments ? (
               <div className="animate-pulse space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -164,7 +436,7 @@ const PostPage = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500">No comments yet.</p>
+              <p className="text-gray-500">No comments yet. Be the first to comment!</p>
             )}
           </div>
         </article>

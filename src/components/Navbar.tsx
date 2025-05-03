@@ -29,7 +29,7 @@ const Navbar = () => {
         {/* Logo */}
         <div className="flex items-center">
           <Link to="/" className="text-2xl font-serif font-bold">
-            Verse
+            Babita Writes
           </Link>
         </div>
 
