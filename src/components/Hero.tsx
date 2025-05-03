@@ -78,7 +78,7 @@ const Hero = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary">
                     <img 
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=256&q=80" 
+                      src="https://t3.ftcdn.net/jpg/05/54/52/34/360_F_554523496_K9wIKslSbPU1d8WCQwPsTWo5cGDNRKMp.jpg" 
                       alt="Babita" 
                       className="w-full h-full object-cover"
                     />
