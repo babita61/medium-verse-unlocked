@@ -151,7 +151,7 @@ const PostCard = ({ post, featured = false, className }: PostCardProps) => {
                   ) : (
                     <div className="w-6 h-6 rounded-full bg-gray-200 mr-2"></div>
                   )}
-                  <span className="text-sm text-gray-600">{post.authorName}</span>
+                  <span className="text-sm text-gray-600">Babita</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-500">
                   <Clock className="h-4 w-4 mr-1" />

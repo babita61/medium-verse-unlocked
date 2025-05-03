@@ -1,5 +1,3 @@
-
-// Updating only the toggleBookmarkMutation part in PostPage.tsx to ensure it correctly handles errors and provides feedback
 import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -379,6 +377,21 @@ const PostPage = () => {
           </div>
 
           <div className="mt-10 pt-8 border-t border-gray-200">
+            <div className="flex items-center mb-6">
+              {post.author?.avatar_url ? (
+                <img
+                  src={post.author.avatar_url}
+                  alt="Babita"
+                  className="w-10 h-10 rounded-full mr-4"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-200 mr-4"></div>
+              )}
+              <div>
+                <p className="font-medium">Posted by Babita</p>
+              </div>
+            </div>
+            
             <h3 className="text-xl font-bold mb-6">Comments</h3>
             
             {user ? (

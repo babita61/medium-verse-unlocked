@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -154,10 +153,7 @@ const ProfilePage = () => {
                     excerpt: bookmark.post.excerpt || bookmark.post.content?.substring(0, 150) + "..." || "",
                     coverImage: bookmark.post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
                     category: bookmark.post.category?.name || 'Uncategorized',
-                    authorName:
-                      bookmark.post.author?.full_name ||
-                      bookmark.post.author?.username ||
-                      "Unknown",
+                    authorName: "Babita",
                     authorAvatar: bookmark.post.author?.avatar_url,
                     createdAt: new Date(bookmark.post.created_at).toISOString(),
                     readTime: bookmark.post.read_time,
