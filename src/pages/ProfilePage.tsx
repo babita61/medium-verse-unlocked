@@ -48,7 +48,12 @@ const ProfilePage = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching bookmarks:", error);
+        throw error;
+      }
+      
+      console.log("Fetched bookmarks:", data);
       return data as Bookmark[];
     },
     enabled: !!user,
@@ -145,6 +150,7 @@ const ProfilePage = () => {
                   key={bookmark.id}
                   post={{
                     ...bookmark.post,
+                    id: bookmark.post.id,
                     category: bookmark.post.category?.name || '',
                     authorName:
                       bookmark.post.author?.full_name ||
@@ -153,7 +159,10 @@ const ProfilePage = () => {
                     authorAvatar: bookmark.post.author?.avatar_url,
                     createdAt: new Date(bookmark.post.created_at).toISOString(),
                     readTime: bookmark.post.read_time,
-                    coverImage: bookmark.post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d'
+                    coverImage: bookmark.post.cover_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d',
+                    excerpt: bookmark.post.excerpt || '',
+                    slug: bookmark.post.slug,
+                    title: bookmark.post.title
                   }}
                 />
               ))}

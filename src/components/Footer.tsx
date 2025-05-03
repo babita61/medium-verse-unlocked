@@ -8,7 +8,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between">
           <div className="mb-8 md:mb-0">
             <Link to="/" className="text-2xl font-serif font-bold">
-              Verse
+              Babita Writes
             </Link>
             <p className="text-gray-500 mt-2 max-w-xs">
               A community of writers, thinkers, and storytellers sharing ideas that matter.
@@ -49,7 +49,7 @@ const Footer = () => {
         <div className="border-t border-gray-200 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} Verse. All rights reserved.
+              © {new Date().getFullYear()} Babita Writes. All rights reserved.
             </p>
             <div className="mt-4 md:mt-0">
               <div className="flex space-x-4">

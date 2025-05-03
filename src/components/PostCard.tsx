@@ -1,8 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Clock, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "@/components/ui/sonner";
 
 interface PostCardProps {
   post: {
@@ -23,11 +26,65 @@ interface PostCardProps {
 
 const PostCard = ({ post, featured = false, className }: PostCardProps) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const { user } = useAuth();
 
-  const handleBookmarkClick = (e: React.MouseEvent) => {
+  useEffect(() => {
+    // Check if post is bookmarked by current user
+    const checkBookmark = async () => {
+      if (!user || !post.id) return;
+      
+      const { data, error } = await supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("post_id", post.id)
+        .eq("user_id", user.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking bookmark status:", error);
+      } else {
+        setIsBookmarked(!!data);
+      }
+    };
+
+    checkBookmark();
+  }, [user, post.id]);
+
+  const handleBookmarkClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsBookmarked(!isBookmarked);
+    
+    if (!user) {
+      toast.error("Please sign in to bookmark posts");
+      return;
+    }
+    
+    try {
+      if (isBookmarked) {
+        // Remove bookmark
+        const { error } = await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("post_id", post.id)
+          .eq("user_id", user.id);
+        
+        if (error) throw error;
+        setIsBookmarked(false);
+        toast.success("Bookmark removed");
+      } else {
+        // Add bookmark
+        const { error } = await supabase
+          .from("bookmarks")
+          .insert([{ post_id: post.id, user_id: user.id }]);
+        
+        if (error) throw error;
+        setIsBookmarked(true);
+        toast.success("Post bookmarked");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update bookmark");
+      console.error("Bookmark error:", error);
+    }
   };
 
   // Function to get category color
