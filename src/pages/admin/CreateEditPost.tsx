@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Image, Loader2 } from 'lucide-react';
+import { Image, Loader2, Bold, Italic, Underline, Heading1, Heading2, Heading3, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Link as LinkIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const CreateEditPost = () => {
   const { user } = useAuth();
@@ -22,12 +26,14 @@ const CreateEditPost = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { postId } = useParams<{ postId: string }>();
+  const editorRef = useRef(null);
   
   const isEditing = !!postId;
   
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [content, setContent] = useState('');
+  const [editorContent, setEditorContent] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -35,8 +41,9 @@ const CreateEditPost = () => {
   const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [editorView, setEditorView] = useState('visual'); // 'visual' or 'html'
 
   // Fetch categories for dropdown
   const { data: categories } = useQuery({
@@ -76,6 +83,7 @@ const CreateEditPost = () => {
       setTitle(postData.title);
       setSlug(postData.slug);
       setContent(postData.content);
+      setEditorContent(postData.content);
       setExcerpt(postData.excerpt || '');
       setCoverImage(postData.cover_image || '');
       setCategoryId(postData.category_id || '');
@@ -89,7 +97,71 @@ const CreateEditPost = () => {
     }
   }, [postData]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    // Load TinyMCE editor script
+    if (!document.querySelector('#tinymce-script')) {
+      const script = document.createElement('script');
+      script.id = 'tinymce-script';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.7.0/tinymce.min.js';
+      script.onload = initEditor;
+      document.body.appendChild(script);
+    } else {
+      initEditor();
+    }
+
+    return () => {
+      // Clean up TinyMCE when component unmounts
+      if (window.tinymce) {
+        window.tinymce.remove('#rich-text-editor');
+      }
+    };
+  }, []);
+
+  // Initialize TinyMCE editor
+  const initEditor = () => {
+    if (window.tinymce && editorRef.current && !editorRef.current.hasEditor) {
+      window.tinymce.init({
+        selector: '#rich-text-editor',
+        height: 500,
+        menubar: false,
+        plugins: [
+          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks | bold italic underline | ' +
+          'alignleft aligncenter alignright alignjustify | ' +
+          'bullist numlist outdent indent | link image | removeformat | help',
+        content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 16px; line-height: 1.5; }',
+        setup: (editor) => {
+          // Store editor reference
+          editorRef.current.editor = editor;
+          
+          // Set initial content
+          if (content) {
+            editor.on('init', () => {
+              editor.setContent(content);
+            });
+          }
+          
+          // Update content state when editor changes
+          editor.on('change', () => {
+            setEditorContent(editor.getContent());
+            setContent(editor.getContent());
+          });
+        }
+      });
+      
+      editorRef.current.hasEditor = true;
+    }
+  };
+
+  // Simple formatting functions for custom toolbar (if not using TinyMCE)
+  const formatText = (command, value = null) => {
+    document.execCommand(command, false, value);
+  };
+
+  const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
@@ -97,13 +169,13 @@ const CreateEditPost = () => {
       // Create a preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadImage = async (): Promise<string | null> => {
+  const uploadImage = async () => {
     if (!imageFile) return coverImage;
     
     setUploadingImage(true);
@@ -123,7 +195,7 @@ const CreateEditPost = () => {
         .getPublicUrl(filePath);
       
       return data.publicUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading image:', error);
       toast({
         title: "Upload failed",
@@ -151,10 +223,16 @@ const CreateEditPost = () => {
         }
       }
       
+      // Make sure we get the latest content from the editor
+      let finalContent = content;
+      if (editorRef.current?.editor) {
+        finalContent = editorRef.current.editor.getContent();
+      }
+      
       const postData = {
         title,
         slug: slug || title.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-'),
-        content,
+        content: finalContent,
         excerpt,
         cover_image: finalCoverImage,
         category_id: categoryId || null,
@@ -191,7 +269,7 @@ const CreateEditPost = () => {
       queryClient.invalidateQueries({ queryKey: ['recent-posts'] });
       navigate('/admin/posts');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -200,7 +278,7 @@ const CreateEditPost = () => {
     }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     
     if (!title || !content) {
@@ -220,11 +298,111 @@ const CreateEditPost = () => {
   };
 
   const calculateReadTime = () => {
+    // Calculate from rich text content by removing HTML tags first
+    const textContent = editorContent.replace(/<[^>]*>?/gm, '');
     const wordsPerMinute = 200;
-    const words = content.trim().split(/\s+/).length;
+    const words = textContent.trim().split(/\s+/).length;
     const minutes = Math.ceil(words / wordsPerMinute);
     setReadTime(minutes > 0 ? minutes : 1);
   };
+
+  const toggleEditorView = (view) => {
+    setEditorView(view);
+    
+    if (editorRef.current?.editor) {
+      if (view === 'visual') {
+        // When switching to visual mode, make sure the editor has the latest content
+        const editor = editorRef.current.editor;
+        editor.setContent(content);
+      }
+    }
+  };
+
+  // Custom Toolbar component - can be used as an alternative to TinyMCE
+  const CustomToolbar = () => (
+    <div className="bg-gray-50 p-2 rounded-t-md border border-gray-200 flex flex-wrap gap-2">
+      <ToggleGroup type="multiple" className="flex gap-1">
+        <ToggleGroupItem value="bold" aria-label="Bold" onClick={() => formatText('bold')}>
+          <Bold className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="italic" aria-label="Italic" onClick={() => formatText('italic')}>
+          <Italic className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="underline" aria-label="Underline" onClick={() => formatText('underline')}>
+          <Underline className="h-4 w-4" />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <ToggleGroup type="single" className="flex gap-1">
+        <ToggleGroupItem value="h1" aria-label="Heading 1" onClick={() => formatText('formatBlock', '<h1>')}>
+          <Heading1 className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="h2" aria-label="Heading 2" onClick={() => formatText('formatBlock', '<h2>')}>
+          <Heading2 className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="h3" aria-label="Heading 3" onClick={() => formatText('formatBlock', '<h3>')}>
+          <Heading3 className="h-4 w-4" />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <ToggleGroup type="single" defaultValue="left" className="flex gap-1">
+        <ToggleGroupItem value="left" aria-label="Align Left" onClick={() => formatText('justifyLeft')}>
+          <AlignLeft className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="center" aria-label="Align Center" onClick={() => formatText('justifyCenter')}>
+          <AlignCenter className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="right" aria-label="Align Right" onClick={() => formatText('justifyRight')}>
+          <AlignRight className="h-4 w-4" />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      
+      <Separator orientation="vertical" className="h-6" />
+      
+      <Button variant="ghost" size="icon" onClick={() => formatText('insertUnorderedList')}>
+        <List className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => formatText('insertOrderedList')}>
+        <ListOrdered className="h-4 w-4" />
+      </Button>
+      
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <LinkIcon className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="space-y-4">
+            <h4 className="font-medium">Insert Link</h4>
+            <div className="space-y-2">
+              <Label htmlFor="link-text">Text</Label>
+              <Input id="link-text" placeholder="Link text" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="link-url">URL</Label>
+              <Input id="link-url" placeholder="https://example.com" />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => {
+                const text = document.getElementById('link-text').value;
+                const url = document.getElementById('link-url').value;
+                if (url) {
+                  formatText('createLink', url);
+                }
+              }}>
+                Insert Link
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -290,15 +468,36 @@ const CreateEditPost = () => {
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Write your post content here..."
-                  className="min-h-[300px]"
-                  required
-                />
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="content">Content</Label>
+                  <Tabs value={editorView} onValueChange={toggleEditorView} className="w-auto">
+                    <TabsList>
+                      <TabsTrigger value="visual">Visual</TabsTrigger>
+                      <TabsTrigger value="html">HTML</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                
+                {/* Rich text editor */}
+                <div className="min-h-[300px] border rounded-md">
+                  {editorView === 'visual' ? (
+                    <div ref={editorRef}>
+                      <textarea
+                        id="rich-text-editor"
+                        style={{ visibility: 'hidden' }}
+                        defaultValue={content}
+                      />
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      className="min-h-[300px] font-mono text-sm"
+                      spellCheck="false"
+                    />
+                  )}
+                </div>
+                
                 <button
                   type="button"
                   onClick={calculateReadTime}
