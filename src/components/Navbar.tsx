@@ -12,9 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user, profile, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   
@@ -23,34 +28,52 @@ const Navbar = () => {
     navigate("/");
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
-    <nav className="border-b py-4 bg-white sticky top-0 z-10">
+    <nav className="border-b py-4 bg-white dark:bg-gray-800 dark:border-gray-700 sticky top-0 z-10">
       <div className="container-blog flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center">
-          <Link to="/" className="text-2xl font-serif font-bold">
+          <Link to="/" className="text-2xl font-serif font-bold dark:text-white">
             Babita Writes
           </Link>
         </div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-gray-600 hover:text-black">
+          <Link to="/" className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white">
             Home
           </Link>
           <div className="relative group">
-            <Link to="/categories" className="text-gray-600 hover:text-black">
+            <Link to="/categories" className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white">
               Categories
             </Link>
           </div>
-          <div className="flex items-center">
-            <Search className="h-5 w-5 text-gray-500 cursor-pointer hover:text-black" />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost" 
+              size="icon"
+              onClick={() => setIsSearchOpen(true)}
+              aria-label="Search"
+              className="text-gray-500 dark:text-gray-300"
+            >
+              <Search className="h-5 w-5 hover:text-black dark:hover:text-white" />
+            </Button>
+
+            <ThemeToggle />
           </div>
           {user ? (
             <div className="flex items-center space-x-4">
               {isAdmin && (
                 <Link to="/admin">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="dark:text-gray-300">
                     Admin
                   </Button>
                 </Link>
@@ -97,7 +120,7 @@ const Navbar = () => {
           ) : (
             <div className="flex items-center space-x-2">
               <Link to="/auth/login">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="dark:text-gray-300">
                   Sign In
                 </Button>
               </Link>
@@ -111,58 +134,93 @@ const Navbar = () => {
         </div>
 
         {/* Mobile menu button */}
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center space-x-2">
+          <Button
+            variant="ghost" 
+            size="icon"
+            onClick={() => setIsSearchOpen(true)}
+            aria-label="Search"
+            className="text-gray-500 dark:text-gray-300"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+
+          <ThemeToggle />
+
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMenuOpen ? <X /> : <Menu />}
           </Button>
         </div>
       </div>
 
+      {/* Search Dialog */}
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Search Articles</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSearch} className="grid gap-4 py-4">
+            <div className="flex items-center">
+              <Input
+                type="search"
+                placeholder="Search for articles, topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 mr-2"
+                autoFocus
+              />
+              <Button type="submit" disabled={!searchQuery.trim()}>Search</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 w-full bg-white border-b animate-fade-in">
+        <div className="md:hidden absolute top-16 left-0 w-full bg-white dark:bg-gray-800 border-b dark:border-gray-700 animate-fade-in">
           <div className="container-blog py-4 flex flex-col space-y-4">
             <Link 
               to="/" 
-              className="block py-2 text-gray-600 hover:text-black"
+              className="block py-2 text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
               onClick={() => setIsMenuOpen(false)}
             >
               Home
             </Link>
             <Link 
               to="/categories" 
-              className="block py-2 text-gray-600 hover:text-black"
+              className="block py-2 text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
               onClick={() => setIsMenuOpen(false)}
             >
               Categories
             </Link>
-            <div className="pt-2 border-t">
+            <div className="pt-2 border-t dark:border-gray-700">
               {user ? (
                 <div className="flex flex-col space-y-2">
                   {isAdmin && (
                     <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
-                      <Button variant="ghost" className="w-full" size="sm">
+                      <Button variant="ghost" className="w-full dark:text-gray-300" size="sm">
                         Admin Dashboard
                       </Button>
                     </Link>
                   )}
                   <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full" size="sm">
+                    <Button variant="ghost" className="w-full dark:text-gray-300" size="sm">
                       Profile
                     </Button>
                   </Link>
-                  <Button variant="ghost" className="w-full" size="sm" onClick={handleSignOut}>
+                  <Button variant="ghost" className="w-full dark:text-gray-300" size="sm" onClick={handleSignOut}>
                     Sign Out
                   </Button>
                 </div>
               ) : (
                 <div className="flex flex-col space-y-2">
                   <Link to="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full" size="sm">
+                    <Button variant="ghost" className="w-full dark:text-gray-300" size="sm">
                       Sign In
                     </Button>
                   </Link>
