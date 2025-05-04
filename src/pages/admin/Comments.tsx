@@ -20,17 +20,6 @@ interface CommentWithPost extends Comment {
 const AdminComments = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-
-
-
-
-
-
-
-
-
-
-
   const queryClient = useQueryClient();
 
   const handleView = (comment: CommentWithPost) => {
@@ -49,27 +38,9 @@ const AdminComments = () => {
     if (error) {
       alert("Failed to delete comment: " + error.message);
     } else {
-      queryClient.invalidateQueries(["admin-comments"]);
+      queryClient.invalidateQueries({ queryKey: ["admin-comments"] });
     }
   };
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   const { data: profile } = useQuery({
     queryKey: ["admin-profile", user?.id],
@@ -248,7 +219,6 @@ const AdminComments = () => {
                         >
                           Delete
                         </button>
-
                       </td>
                     </tr>
                   ))}

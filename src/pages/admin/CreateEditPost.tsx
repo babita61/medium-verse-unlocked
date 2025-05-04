@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,13 +21,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
+// TinyMCE type definitions
+declare global {
+  interface Window { 
+    tinymce: any; 
+  }
+}
+
+interface EditorRef {
+  editor?: any;
+  hasEditor?: boolean;
+  current: any;
+}
+
 const CreateEditPost = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { postId } = useParams<{ postId: string }>();
-  const editorRef = useRef(null);
+  const editorRef = useRef<any>(null);
   
   const isEditing = !!postId;
   
@@ -41,8 +55,8 @@ const CreateEditPost = () => {
   const [published, setPublished] = useState(false);
   const [featured, setFeatured] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [editorView, setEditorView] = useState('visual'); // 'visual' or 'html'
 
   // Fetch categories for dropdown
@@ -133,7 +147,7 @@ const CreateEditPost = () => {
           'alignleft aligncenter alignright alignjustify | ' +
           'bullist numlist outdent indent | link image | removeformat | help',
         content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 16px; line-height: 1.5; }',
-        setup: (editor) => {
+        setup: (editor: any) => {
           // Store editor reference
           editorRef.current.editor = editor;
           
@@ -157,11 +171,11 @@ const CreateEditPost = () => {
   };
 
   // Simple formatting functions for custom toolbar (if not using TinyMCE)
-  const formatText = (command, value = null) => {
+  const formatText = (command: string, value: string | null = null) => {
     document.execCommand(command, false, value);
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
@@ -169,7 +183,7 @@ const CreateEditPost = () => {
       // Create a preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        setImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -195,7 +209,7 @@ const CreateEditPost = () => {
         .getPublicUrl(filePath);
       
       return data.publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
       toast({
         title: "Upload failed",
@@ -269,7 +283,7 @@ const CreateEditPost = () => {
       queryClient.invalidateQueries({ queryKey: ['recent-posts'] });
       navigate('/admin/posts');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -278,7 +292,7 @@ const CreateEditPost = () => {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title || !content) {
@@ -306,7 +320,7 @@ const CreateEditPost = () => {
     setReadTime(minutes > 0 ? minutes : 1);
   };
 
-  const toggleEditorView = (view) => {
+  const toggleEditorView = (view: string) => {
     setEditorView(view);
     
     if (editorRef.current?.editor) {
@@ -389,8 +403,12 @@ const CreateEditPost = () => {
             </div>
             <div className="flex justify-end">
               <Button onClick={() => {
-                const text = document.getElementById('link-text').value;
-                const url = document.getElementById('link-url').value;
+                const textElement = document.getElementById('link-text') as HTMLInputElement;
+                const urlElement = document.getElementById('link-url') as HTMLInputElement;
+                
+                const text = textElement?.value || '';
+                const url = urlElement?.value || '';
+                
                 if (url) {
                   formatText('createLink', url);
                 }
@@ -405,12 +423,12 @@ const CreateEditPost = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col dark:bg-gray-900">
       <Navbar />
       <main className="flex-grow py-10">
         <div className="container mx-auto max-w-4xl px-4">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">{isEditing ? 'Edit Post' : 'Create New Post'}</h1>
+            <h1 className="text-3xl font-bold dark:text-white">{isEditing ? 'Edit Post' : 'Create New Post'}</h1>
             <Button
               variant="outline"
               onClick={() => navigate('/admin/posts')}
@@ -422,23 +440,24 @@ const CreateEditPost = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title" className="dark:text-white">Title</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Enter post title"
                   required
+                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 />
               </div>
               
               <div className="grid gap-2">
                 <div className="flex justify-between">
-                  <Label htmlFor="slug">Slug</Label>
+                  <Label htmlFor="slug" className="dark:text-white">Slug</Label>
                   <button
                     type="button"
                     onClick={generateSlug}
-                    className="text-sm text-blue-600 hover:underline"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Generate from title
                   </button>
@@ -448,16 +467,17 @@ const CreateEditPost = () => {
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder="post-url-slug"
+                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 />
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="dark:text-white">Category</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="dark:bg-gray-800 dark:text-white dark:border-gray-700">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="dark:bg-gray-800">
                     {categories?.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -469,9 +489,9 @@ const CreateEditPost = () => {
               
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="content">Content</Label>
+                  <Label htmlFor="content" className="dark:text-white">Content</Label>
                   <Tabs value={editorView} onValueChange={toggleEditorView} className="w-auto">
-                    <TabsList>
+                    <TabsList className="dark:bg-gray-700">
                       <TabsTrigger value="visual">Visual</TabsTrigger>
                       <TabsTrigger value="html">HTML</TabsTrigger>
                     </TabsList>
@@ -479,7 +499,7 @@ const CreateEditPost = () => {
                 </div>
                 
                 {/* Rich text editor */}
-                <div className="min-h-[300px] border rounded-md">
+                <div className="min-h-[300px] border rounded-md dark:border-gray-700">
                   {editorView === 'visual' ? (
                     <div ref={editorRef}>
                       <textarea
@@ -492,7 +512,7 @@ const CreateEditPost = () => {
                     <Textarea
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      className="min-h-[300px] font-mono text-sm"
+                      className="min-h-[300px] font-mono text-sm dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       spellCheck="false"
                     />
                   )}
@@ -501,33 +521,34 @@ const CreateEditPost = () => {
                 <button
                   type="button"
                   onClick={calculateReadTime}
-                  className="text-sm text-blue-600 hover:underline justify-self-end"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline justify-self-end"
                 >
                   Calculate read time
                 </button>
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="excerpt">Excerpt</Label>
+                <Label htmlFor="excerpt" className="dark:text-white">Excerpt</Label>
                 <Textarea
                   id="excerpt"
                   value={excerpt}
                   onChange={(e) => setExcerpt(e.target.value)}
                   placeholder="Brief summary of the post"
+                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 />
               </div>
               
               <div className="grid gap-4">
-                <Label>Cover Image</Label>
+                <Label className="dark:text-white">Cover Image</Label>
                 <div className="flex flex-col gap-4 md:flex-row md:items-start">
                   <div className="flex-1">
-                    <Card className="border-dashed cursor-pointer hover:bg-gray-50 transition-colors">
+                    <Card className="border-dashed cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors dark:bg-gray-800 dark:border-gray-700">
                       <CardContent className="p-6 flex justify-center items-center">
                         <label className="cursor-pointer flex flex-col items-center">
-                          <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-                            <Image className="h-6 w-6 text-gray-500" />
+                          <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
+                            <Image className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                           </div>
-                          <span className="text-sm text-gray-500">Click to {imageFile || coverImage ? "change" : "upload"} image</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Click to {imageFile || coverImage ? "change" : "upload"} image</span>
                           <Input 
                             type="file" 
                             accept="image/*" 
@@ -539,13 +560,13 @@ const CreateEditPost = () => {
                     </Card>
                     {!imageFile && (
                       <div className="mt-2">
-                        <Label htmlFor="coverImageUrl">Or enter image URL</Label>
+                        <Label htmlFor="coverImageUrl" className="dark:text-white">Or enter image URL</Label>
                         <Input
                           id="coverImageUrl"
                           value={coverImage}
                           onChange={(e) => setCoverImage(e.target.value)}
                           placeholder="https://example.com/image.jpg"
-                          className="mt-1"
+                          className="mt-1 dark:bg-gray-800 dark:text-white dark:border-gray-700"
                         />
                       </div>
                     )}
@@ -553,7 +574,7 @@ const CreateEditPost = () => {
                   
                   {/* Preview */}
                   {(imagePreview || coverImage) && (
-                    <div className="w-full md:w-1/3 aspect-video bg-gray-100 rounded-md overflow-hidden relative">
+                    <div className="w-full md:w-1/3 aspect-video bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden relative">
                       {uploadingImage && (
                         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
                           <Loader2 className="h-8 w-8 text-white animate-spin" />
@@ -570,13 +591,14 @@ const CreateEditPost = () => {
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="readTime">Read Time (minutes)</Label>
+                <Label htmlFor="readTime" className="dark:text-white">Read Time (minutes)</Label>
                 <Input
                   id="readTime"
                   type="number"
                   min="1"
                   value={readTime}
                   onChange={(e) => setReadTime(parseInt(e.target.value) || 1)}
+                  className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 />
               </div>
               
@@ -587,7 +609,7 @@ const CreateEditPost = () => {
                     checked={published}
                     onCheckedChange={setPublished}
                   />
-                  <Label htmlFor="published">Published</Label>
+                  <Label htmlFor="published" className="dark:text-white">Published</Label>
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -596,7 +618,7 @@ const CreateEditPost = () => {
                     checked={featured}
                     onCheckedChange={setFeatured}
                   />
-                  <Label htmlFor="featured">Featured</Label>
+                  <Label htmlFor="featured" className="dark:text-white">Featured</Label>
                 </div>
               </div>
             </div>
@@ -605,6 +627,7 @@ const CreateEditPost = () => {
               <Button 
                 type="submit" 
                 disabled={mutation.isPending || uploadingImage}
+                className="dark:bg-primary-500"
               >
                 {mutation.isPending ? 'Saving...' : isEditing ? 'Update Post' : 'Create Post'}
               </Button>
