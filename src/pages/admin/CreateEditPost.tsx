@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -36,10 +35,29 @@ interface EditorRef {
   current: any;
 }
 
+// Add gallery_images to the post type
+interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string;
+  cover_image: string;
+  category_id: string;
+  read_time: number;
+  published: boolean;
+  featured: boolean;
+  author_id: string;
+  created_at: string;
+  updated_at: string;
+  publish_date: string;
+  views: number;
+  gallery_images?: string[];
+}
+
 const CreateEditPost = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { postId } = useParams<{ postId: string }>();
   const editorRef = useRef<any>(null);
@@ -77,7 +95,7 @@ const CreateEditPost = () => {
   });
 
   // If editing, fetch post data
-  const { data: postData } = useQuery({
+  const { data: postData } = useQuery<Post>({
     queryKey: ['edit-post', postId],
     queryFn: async () => {
       if (!postId) return null;
@@ -89,7 +107,7 @@ const CreateEditPost = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Post;
     },
     enabled: isEditing,
   });
@@ -178,8 +196,6 @@ const CreateEditPost = () => {
             tooltip: 'Insert image',
             onAction: function() {
               // Open custom image uploader dialog
-              // The dialog would allow uploading to Supabase storage
-              // and inserting the image into the editor
               document.getElementById('editor-image-upload')?.click();
             }
           });
@@ -239,11 +255,7 @@ const CreateEditPost = () => {
       return data.publicUrl;
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload image",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to upload image");
       return null;
     } finally {
       setUploadingImage(false);
@@ -303,21 +315,14 @@ const CreateEditPost = () => {
       }
     },
     onSuccess: (message) => {
-      toast({
-        title: "Success",
-        description: message,
-      });
+      toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['admin-posts'] });
       queryClient.invalidateQueries({ queryKey: ['featured-posts'] });
       queryClient.invalidateQueries({ queryKey: ['recent-posts'] });
       navigate('/admin/posts');
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message);
     }
   });
 
@@ -325,11 +330,7 @@ const CreateEditPost = () => {
     e.preventDefault();
     
     if (!title || !content) {
-      toast({
-        title: "Error",
-        description: "Title and content are required",
-        variant: "destructive",
-      });
+      toast.error("Title and content are required");
       return;
     }
     
@@ -484,11 +485,7 @@ const CreateEditPost = () => {
               })
               .catch((error) => {
                 console.error('Error uploading image:', error);
-                toast({
-                  title: "Upload failed",
-                  description: error.message || "Failed to upload image",
-                  variant: "destructive",
-                });
+                toast.error(error.message || "Failed to upload image");
               })
               .finally(() => {
                 setUploadingImage(false);

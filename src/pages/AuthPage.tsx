@@ -7,6 +7,7 @@ import Register from '@/components/auth/Register';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/sonner';
 
 const AuthPage = () => {
   const { user, isLoading } = useAuth();
