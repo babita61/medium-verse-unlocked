@@ -16,6 +16,8 @@ interface AuthContextValue {
   signUp: (email: string, password: string, userData: Partial<Profile>) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithOAuth: (provider: Provider) => Promise<void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  verifyOtp: (phone: string, token: string) => Promise<void>;
   updateProfile: (data: Partial<Profile>) => Promise<void>;
 }
 
@@ -141,6 +143,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const signInWithPhone = async (phone: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: {
+          channel: 'sms',
+        },
+      });
+
+      if (error) throw error;
+      
+      toast.success("Verification code sent to your phone");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send verification code");
+      throw error;
+    }
+  };
+
+  const verifyOtp = async (phone: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token,
+        type: 'sms',
+      });
+
+      if (error) throw error;
+      
+      toast.success("Phone number verified successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to verify code");
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -183,6 +220,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signUp,
         signOut,
         signInWithOAuth,
+        signInWithPhone,
+        verifyOtp,
         updateProfile,
       }}
     >

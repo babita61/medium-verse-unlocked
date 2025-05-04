@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { v4 as uuidv4 } from 'uuid';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -20,6 +20,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import MultipleImageUploader from '@/components/editor/MultipleImageUploader';
+import ImageUploader from '@/components/editor/ImageUploader';
 
 // TinyMCE type definitions
 declare global {
@@ -58,6 +60,7 @@ const CreateEditPost = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [editorView, setEditorView] = useState('visual'); // 'visual' or 'html'
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   // Fetch categories for dropdown
   const { data: categories } = useQuery({
@@ -104,6 +107,11 @@ const CreateEditPost = () => {
       setReadTime(postData.read_time);
       setPublished(postData.published);
       setFeatured(postData.featured);
+      
+      // Set gallery images if they exist in the post data
+      if (postData.gallery_images && Array.isArray(postData.gallery_images)) {
+        setGalleryImages(postData.gallery_images);
+      }
       
       if (postData.cover_image) {
         setImagePreview(postData.cover_image);
@@ -163,10 +171,30 @@ const CreateEditPost = () => {
             setEditorContent(editor.getContent());
             setContent(editor.getContent());
           });
+          
+          // Add custom button for image insertion
+          editor.ui.registry.addButton('customimage', {
+            icon: 'image',
+            tooltip: 'Insert image',
+            onAction: function() {
+              // Open custom image uploader dialog
+              // The dialog would allow uploading to Supabase storage
+              // and inserting the image into the editor
+              document.getElementById('editor-image-upload')?.click();
+            }
+          });
         }
       });
       
       editorRef.current.hasEditor = true;
+    }
+  };
+
+  // Handle inserting image into the editor
+  const handleInsertImage = (imageUrl: string) => {
+    if (editorRef.current?.editor) {
+      const editor = editorRef.current.editor;
+      editor.insertContent(`<img src="${imageUrl}" alt="Inserted image" />`);
     }
   };
 
@@ -249,6 +277,7 @@ const CreateEditPost = () => {
         content: finalContent,
         excerpt,
         cover_image: finalCoverImage,
+        gallery_images: galleryImages,
         category_id: categoryId || null,
         read_time: readTime,
         published,
@@ -334,7 +363,7 @@ const CreateEditPost = () => {
 
   // Custom Toolbar component - can be used as an alternative to TinyMCE
   const CustomToolbar = () => (
-    <div className="bg-gray-50 p-2 rounded-t-md border border-gray-200 flex flex-wrap gap-2">
+    <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded-t-md border border-gray-200 dark:border-gray-600 flex flex-wrap gap-2">
       <ToggleGroup type="multiple" className="flex gap-1">
         <ToggleGroupItem value="bold" aria-label="Bold" onClick={() => formatText('bold')}>
           <Bold className="h-4 w-4" />
@@ -419,6 +448,55 @@ const CreateEditPost = () => {
           </div>
         </PopoverContent>
       </Popover>
+      
+      {/* Add image uploader */}
+      <input
+        type="file"
+        id="editor-image-upload"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            
+            // Handle image upload and insertion
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${uuidv4()}.${fileExt}`;
+            
+            setUploadingImage(true);
+            
+            supabase.storage
+              .from('post_images')
+              .upload(fileName, file)
+              .then(({ data, error }) => {
+                if (error) throw error;
+                
+                return supabase.storage
+                  .from('post_images')
+                  .getPublicUrl(fileName);
+              })
+              .then(({ data }) => {
+                if (editorRef.current?.editor) {
+                  editorRef.current.editor.insertContent(`<img src="${data.publicUrl}" alt="Uploaded image" />`);
+                }
+                // Reset the input
+                e.target.value = '';
+              })
+              .catch((error) => {
+                console.error('Error uploading image:', error);
+                toast({
+                  title: "Upload failed",
+                  description: error.message || "Failed to upload image",
+                  variant: "destructive",
+                });
+              })
+              .finally(() => {
+                setUploadingImage(false);
+              });
+          }
+        }}
+      />
+      <ImageUploader onImageInsert={handleInsertImage} />
     </div>
   );
 
@@ -497,6 +575,8 @@ const CreateEditPost = () => {
                     </TabsList>
                   </Tabs>
                 </div>
+                
+                <CustomToolbar />
                 
                 {/* Rich text editor */}
                 <div className="min-h-[300px] border rounded-md dark:border-gray-700">
@@ -588,6 +668,15 @@ const CreateEditPost = () => {
                     </div>
                   )}
                 </div>
+              </div>
+              
+              {/* Gallery Images */}
+              <div className="grid gap-2">
+                <Label className="dark:text-white">Gallery Images</Label>
+                <MultipleImageUploader 
+                  images={galleryImages}
+                  onImagesChange={setGalleryImages}
+                />
               </div>
               
               <div className="grid gap-2">

@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import CategoryPage from "./pages/CategoryPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import AuthPage from "./pages/AuthPage";
+import AuthCallback from "./pages/AuthCallback";
 import PostPage from "./pages/PostPage";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminPosts from "./pages/admin/Posts";
@@ -33,6 +34,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth/*" element={<AuthPage />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/category/:slug" element={<CategoryPage />} />
               <Route path="/post/:slug" element={<PostPage />} />

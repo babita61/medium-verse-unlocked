@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -19,21 +18,36 @@ import { toast } from "@/components/ui/sonner";
 import { Github, Twitter } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Provider } from "@supabase/supabase-js";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
+const phoneSchema = z.object({
+  phone: z.string().min(10, { message: "Please enter a valid phone number" }),
+});
+
+const otpSchema = z.object({
+  otp: z.string().min(6, { message: "Please enter the 6-digit code" }),
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
+type PhoneFormValues = z.infer<typeof phoneSchema>;
+type OtpFormValues = z.infer<typeof otpSchema>;
 
 const Login = () => {
-  const { signIn, signInWithOAuth } = useAuth();
+  const { signIn, signInWithOAuth, signInWithPhone, verifyOtp } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [oAuthLoading, setOAuthLoading] = useState<Provider | null>(null);
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
 
-  const form = useForm<LoginFormValues>({
+  const emailForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -41,7 +55,21 @@ const Login = () => {
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const phoneForm = useForm<PhoneFormValues>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: {
+      phone: "",
+    },
+  });
+
+  const otpForm = useForm<OtpFormValues>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      otp: "",
+    },
+  });
+
+  const onSubmitEmail = async (values: LoginFormValues) => {
     try {
       setIsLoading(true);
       await signIn(values.email, values.password);
@@ -52,6 +80,43 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const onSubmitPhone = async (values: PhoneFormValues) => {
+    try {
+      setIsLoading(true);
+      const formattedPhone = formatPhoneNumber(values.phone);
+      setPhoneNumber(formattedPhone);
+      await signInWithPhone(formattedPhone);
+      setShowOtp(true);
+    } catch (error) {
+      console.error("Phone login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmitOtp = async (values: OtpFormValues) => {
+    try {
+      setIsLoading(true);
+      await verifyOtp(phoneNumber, values.otp);
+      navigate("/");
+    } catch (error) {
+      console.error("OTP verification error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatPhoneNumber = (phone: string): string => {
+    // Check if phone number already has country code
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+    
+    // Otherwise add +1 (US) code by default
+    // In a real app, you may want to let users select their country code
+    return `+1${phone.replace(/\D/g, '')}`;
   };
 
   const handleOAuthSignIn = async (provider: Provider) => {
@@ -116,67 +181,155 @@ const Login = () => {
           Or continue with
         </span>
       </div>
+      
+      <Tabs defaultValue="email" value={authMethod} onValueChange={(value) => setAuthMethod(value as "email" | "phone")}>
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="email">Email</TabsTrigger>
+          <TabsTrigger value="phone">Phone</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="email">
+          <Form {...emailForm}>
+            <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-4">
+              <FormField
+                control={emailForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="dark:text-gray-200">Email</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="youremail@example.com" 
+                        type="email" 
+                        autoComplete="email"
+                        className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="dark:text-gray-200">Email</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="youremail@example.com" 
-                    type="email" 
-                    autoComplete="email"
-                    className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={emailForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="dark:text-gray-200">Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="••••••••" 
+                        type="password" 
+                        autoComplete="current-password"
+                        className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="dark:text-gray-200">Password</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="••••••••" 
-                    type="password" 
-                    autoComplete="current-password"
-                    className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </Form>
+        </TabsContent>
+        
+        <TabsContent value="phone">
+          {!showOtp ? (
+            <Form {...phoneForm}>
+              <form onSubmit={phoneForm.handleSubmit(onSubmitPhone)} className="space-y-4">
+                <FormField
+                  control={phoneForm.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="dark:text-gray-200">Phone Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="+1 (123) 456-7890" 
+                          type="tel" 
+                          autoComplete="tel"
+                          className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading}
-          >
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Sending code..." : "Send verification code"}
+                </Button>
+              </form>
+            </Form>
+          ) : (
+            <Form {...otpForm}>
+              <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
+                <FormField
+                  control={otpForm.control}
+                  name="otp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="dark:text-gray-200">Verification Code</FormLabel>
+                      <FormControl>
+                        <InputOTP maxLength={6} {...field}>
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <div className="text-center mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Don't have an account?{" "}
-              <Link to="/auth/register" className="text-primary font-medium hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </form>
-      </Form>
+                <div className="flex justify-between">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setShowOtp(false)}
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Verifying..." : "Verify Code"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <div className="text-center mt-4">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Don't have an account?{" "}
+          <Link to="/auth/register" className="text-primary font-medium hover:underline">
+            Sign up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 };

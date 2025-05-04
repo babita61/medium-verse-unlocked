@@ -1,15 +1,44 @@
 
 import { useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Login from '@/components/auth/Login';
 import Register from '@/components/auth/Register';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { supabase } from '@/integrations/supabase/client';
 
 const AuthPage = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Handle auth callbacks (like from OAuth providers)
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      const code = searchParams.get('code');
+      const next = searchParams.get('next') || '/';
+      
+      if (code) {
+        try {
+          // Let Supabase handle the code exchange
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('Error exchanging code for session:', error);
+            toast.error('Authentication failed. Please try again.');
+          } else {
+            // Redirect to home or the next page
+            navigate(next);
+          }
+        } catch (err) {
+          console.error('Error during auth callback:', err);
+        }
+      }
+    };
+    
+    handleAuthCallback();
+  }, [searchParams, navigate]);
 
   // Redirect to homepage if user is already authenticated
   useEffect(() => {
@@ -44,6 +73,12 @@ const AuthPage = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/callback" element={
+              <div className="text-center p-8">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-300">Completing sign in...</p>
+              </div>
+            } />
             <Route path="*" element={<Navigate to="/auth/login" />} />
           </Routes>
         </div>
