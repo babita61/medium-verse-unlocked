@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Post, Comment } from "@/types";
+import DOMPurify from "dompurify"; // You'll need to install this: npm install dompurify
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const PostPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [sanitizedContent, setSanitizedContent] = useState("");
 
   const { data: post, isLoading: loadingPost } = useQuery({
     queryKey: ["post", slug],
@@ -40,6 +42,13 @@ const PostPage = () => {
     },
     enabled: !!slug,
   });
+
+  // Sanitize content when post loads
+  useEffect(() => {
+    if (post?.content) {
+      setSanitizedContent(DOMPurify.sanitize(post.content));
+    }
+  }, [post?.content]);
 
   // Check if the user has bookmarked this post
   useQuery({
@@ -368,13 +377,10 @@ const PostPage = () => {
             )}
           </header>
 
-          <div className="prose max-w-none">
-            {post.content.split("\n").map((paragraph, index) => (
-              <p key={index} className="mb-4">
-                {paragraph}
-              </p>
-            ))}
-          </div>
+          <div 
+            className="prose max-w-none" 
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+          />
 
           <div className="mt-10 pt-8 border-t border-gray-200">
             <div className="flex items-center mb-6">
