@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +22,13 @@ const SubscribeForm = ({ categories }: SubscribeFormProps) => {
   const [email, setEmail] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Auto-fill email when user is logged in
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user]);
 
   // Helper function to toggle category selection
   const toggleCategory = (categoryId: string) => {

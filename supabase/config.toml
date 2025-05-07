@@ -1,6 +1,6 @@
 
 [global]
-project_id = "<your-project-id>"
+project_id = "zvizomqkjqbseqyaeasw"
 
 [functions.ai-helper]
 verify_jwt = true

@@ -32,21 +32,34 @@ const AISummary = ({ postContent }: AISummaryProps) => {
       setIsLoading(true);
       setHasError(false);
       
+      // Make sure the postContent is not too long
+      const truncatedContent = postContent.length > 10000 
+        ? postContent.substring(0, 10000) + "..." 
+        : postContent;
+      
       const response = await supabase.functions.invoke("ai-helper", {
         body: {
           action: "summarize",
-          content: postContent
+          content: truncatedContent
         }
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (!response.data) {
+        console.error("Invalid response structure:", response);
+        throw new Error("Failed to generate summary: Invalid response");
+      }
+
+      if (response.error) {
+        console.error("Summary error:", response.error);
+        throw new Error(response.error.message);
+      }
       
-      setSummary(response.data.result);
+      setSummary(response.data.result || "No summary available");
       setIsOpen(true);
     } catch (error: any) {
       console.error("Error generating summary:", error);
-      toast.error("Failed to generate summary. Please try again.");
       setHasError(true);
+      toast.error("Failed to generate summary. Please try again.");
     } finally {
       setIsLoading(false);
     }

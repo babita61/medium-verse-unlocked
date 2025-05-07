@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const GEMINI_API_KEY = "AIzaSyBtwam1oTcFUgh8QzGHadeWwnSawXaPe0o";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,14 +42,17 @@ serve(async (req) => {
       
       prompt = `Given the following blog post content: 
       
-      ${content}
+      ${content.substring(0, 2000)}
       
-      Identify the 3 most related posts from this list based on topic, theme, and content similarity:
-      ${allPostTitles.map((title: string, i: number) => `${i+1}. ${title}: ${allPostContents[i].slice(0, 200)}...`).join('\n\n')}
+      Identify the 3 most related posts from this list based on semantic similarity, shared themes, similar topics, and complementary subject matter:
+      
+      ${allPostTitles.map((title: string, i: number) => `${i+1}. ${title}: ${allPostContents[i].substring(0, 300)}...`).join('\n\n')}
 
       Return ONLY a JSON array with the indexes (0-based) of the 3 most related posts, like [0, 3, 5]. Do not include any explanations or other text.`;
     }
 
+    console.log(`Sending request to Gemini API for action: ${action}`);
+    
     const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
@@ -86,9 +89,12 @@ serve(async (req) => {
 
     if (action === "summarize") {
       result = data.candidates[0].content.parts[0].text;
+      console.log("Generated summary:", result.substring(0, 100) + "...");
     } 
     else if (action === "related") {
       const rawText = data.candidates[0].content.parts[0].text;
+      console.log("Raw related posts response:", rawText);
+      
       try {
         // Try to extract the JSON array from the text
         const matches = rawText.match(/\[[\d,\s]+\]/);

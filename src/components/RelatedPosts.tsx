@@ -43,14 +43,29 @@ const RelatedPosts = ({ currentPostId, currentPostContent }: RelatedPostsProps) 
 
         // Extract data needed for the AI to analyze
         const allPostTitles = allPosts.map(post => post.title);
-        const allPostContents = allPosts.map(post => post.content || "");
+        
+        // Ensure content excerpts are not too long but contain enough information
+        const allPostContents = allPosts.map(post => {
+          // Get meaningful content excerpt
+          let contentExcerpt = post.excerpt || post.content || "";
+          // Use content if excerpt is too short
+          if (contentExcerpt.length < 100 && post.content) {
+            contentExcerpt = post.content.substring(0, 500);
+          }
+          return contentExcerpt;
+        });
+        
         const allPostSlugs = allPosts.map(post => post.slug);
+
+        // Prepare current post content for analysis
+        // Get content excerpt, no more than 2000 chars to avoid API limits
+        const postContentExcerpt = currentPostContent.substring(0, 2000);
 
         // Call Supabase Edge Function for related posts
         const response = await supabase.functions.invoke("ai-helper", {
           body: {
             action: "related",
-            content: currentPostContent,
+            content: postContentExcerpt,
             additionalData: {
               allPostTitles,
               allPostContents,
@@ -61,7 +76,8 @@ const RelatedPosts = ({ currentPostId, currentPostContent }: RelatedPostsProps) 
 
         if (response.error) throw new Error(response.error.message);
 
-        const relatedIndices = response.data.result || [];
+        const relatedIndices = response.data?.result || [];
+        console.log("Related posts indices:", relatedIndices);
         
         // Map the indices to actual posts
         const relatedPostsData = relatedIndices
@@ -86,6 +102,7 @@ const RelatedPosts = ({ currentPostId, currentPostContent }: RelatedPostsProps) 
           .limit(3);
 
         setRelatedPosts(data || []);
+        toast.error("Couldn't find related posts. Showing recent posts instead.");
       } finally {
         setIsLoading(false);
       }
