@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/context/AuthContext";
-import { Heart, MessageSquare, Bookmark, BookmarkCheck } from "lucide-react";
+import { Heart, MessageSquare, Bookmark, BookmarkCheck, Headphones } from "lucide-react";
+import PodcastPlayer from "@/components/PodcastPlayer";
+import StickyNotes from "@/components/StickyNotes";
+import MoodSelector from "@/components/MoodSelector";
 
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -22,6 +26,7 @@ const PostPage = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [sanitizedContent, setSanitizedContent] = useState("");
+  const [showPodcastPlayer, setShowPodcastPlayer] = useState(false);
 
   const { data: post, isLoading: loadingPost } = useQuery({
     queryKey: ["post", slug],
@@ -283,6 +288,10 @@ const PostPage = () => {
     commentInputRef.current?.focus();
   };
 
+  const togglePodcastPlayer = () => {
+    setShowPodcastPlayer(prev => !prev);
+  };
+
   if (loadingPost) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -335,9 +344,15 @@ const PostPage = () => {
                 {post.category ? post.category.name : "Uncategorized"}
               </span>
             </div>
+            
+            {/* Mood selector */}
+            <div className="mb-4 border-t border-b py-3 border-gray-100 dark:border-gray-800">
+              <p className="text-center text-sm text-gray-500 mb-2">Reading experience:</p>
+              <MoodSelector postId={post.id} />
+            </div>
 
             {/* Engagement buttons */}
-            <div className="flex items-center gap-5 mb-4">
+            <div className="flex flex-wrap items-center gap-5 mb-4">
               <button 
                 onClick={handleToggleLike}
                 className={`flex items-center gap-1 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}
@@ -364,6 +379,17 @@ const PostPage = () => {
                   <Bookmark className="h-5 w-5" />
                 )}
               </button>
+
+              {/* Listen as podcast button */}
+              <button
+                onClick={togglePodcastPlayer}
+                className="flex items-center gap-1 text-gray-500 hover:text-purple-500 ml-auto"
+                aria-expanded={showPodcastPlayer}
+                aria-controls="podcast-player"
+              >
+                <Headphones className="h-5 w-5" />
+                <span className="sm:inline hidden">Listen as podcast</span>
+              </button>
             </div>
 
             {post.cover_image && (
@@ -372,6 +398,19 @@ const PostPage = () => {
                   src={post.cover_image}
                   alt={post.title}
                   className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Podcast player */}
+            {showPodcastPlayer && (
+              <div 
+                id="podcast-player" 
+                className="mb-8 animate-fade-in"
+              >
+                <PodcastPlayer 
+                  content={post.content} 
+                  title={post.title}
                 />
               </div>
             )}
@@ -387,14 +426,16 @@ const PostPage = () => {
               {post.author?.avatar_url ? (
                 <img
                   src={post.author.avatar_url}
-                  alt="Babita"
+                  alt={post.author.full_name || post.author.username}
                   className="w-10 h-10 rounded-full mr-4"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gray-200 mr-4"></div>
               )}
               <div>
-                <p className="font-medium">Posted by Babita</p>
+                <p className="font-medium">
+                  {post.author?.full_name || post.author?.username || "Unknown Author"}
+                </p>
               </div>
             </div>
             
@@ -466,6 +507,9 @@ const PostPage = () => {
             )}
           </div>
         </article>
+        
+        {/* Add sticky notes feature */}
+        {post && <StickyNotes postId={post.id} />}
       </main>
       <Footer />
     </div>

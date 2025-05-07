@@ -63,6 +63,20 @@ export default {
 					fashion: '#FF9671',
 					loket: '#FFC75F',
 					his: '#008F7A',
+				},
+				mood: {
+					sad: {
+						light: '#D3E4FD',
+						dark: '#222A3A'
+					},
+					joyful: {
+						light: '#FEF7CD',
+						dark: '#3A3422'
+					},
+					suspenseful: {
+						light: '#FFE5E5',
+						dark: '#321919'
+					}
 				}
 			},
 			borderRadius: {
@@ -107,6 +121,14 @@ export default {
 				serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
 				sans: ['Inter', 'system-ui', 'sans-serif'],
 			},
+			backgroundImage: {
+				'sad-light': 'linear-gradient(to bottom right, rgba(100, 120, 150, 0.05), rgba(60, 70, 90, 0.1))',
+				'sad-dark': 'linear-gradient(to bottom right, rgba(20, 40, 60, 0.3), rgba(10, 20, 40, 0.4))',
+				'joyful-light': 'linear-gradient(to bottom right, rgba(255, 240, 175, 0.1), rgba(255, 220, 150, 0.15))',
+				'joyful-dark': 'linear-gradient(to bottom right, rgba(70, 60, 20, 0.3), rgba(60, 40, 10, 0.4))',
+				'suspenseful-light': 'linear-gradient(to bottom right, rgba(40, 0, 0, 0.05), rgba(60, 0, 20, 0.1))',
+				'suspenseful-dark': 'linear-gradient(to bottom right, rgba(40, 0, 0, 0.4), rgba(60, 0, 20, 0.5))',
+			}
 		}
 	},
 	plugins: [require("tailwindcss-animate"), require('@tailwindcss/typography')],

@@ -163,6 +163,7 @@ export type Database = {
           created_at: string
           excerpt: string | null
           featured: boolean
+          gallery_images: string[] | null
           id: string
           publish_date: string | null
           published: boolean
@@ -180,6 +181,7 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          gallery_images?: string[] | null
           id?: string
           publish_date?: string | null
           published?: boolean
@@ -197,6 +199,7 @@ export type Database = {
           created_at?: string
           excerpt?: string | null
           featured?: boolean
+          gallery_images?: string[] | null
           id?: string
           publish_date?: string | null
           published?: boolean
@@ -354,6 +357,7 @@ export type Database = {
           created_at: string
           excerpt: string | null
           featured: boolean
+          gallery_images: string[] | null
           id: string
           publish_date: string | null
           published: boolean

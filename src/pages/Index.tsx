@@ -6,10 +6,13 @@ import FeaturedPosts from "@/components/FeaturedPosts";
 import RecentPosts from "@/components/RecentPosts";
 import CategoryList from "@/components/CategoryList";
 import Footer from "@/components/Footer";
+import { useTheme } from "@/context/ThemeContext";
 
 const Index = () => {
+  const { isDark } = useTheme();
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${isDark ? 'dark-theme' : 'light-theme'}`}>
       <Navbar />
       <main className="flex-grow">
         <Hero />

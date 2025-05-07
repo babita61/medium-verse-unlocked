@@ -147,4 +147,74 @@
       transform: translateY(0);
     }
   }
+  
+  /* New animation for theme transitions */
+  .theme-transition {
+    @apply transition-colors duration-300;
+  }
+  
+  /* Dark mode prose styles */
+  .dark .prose {
+    @apply prose-invert;
+  }
+  
+  /* Responsive improvements */
+  .responsive-container {
+    @apply px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl;
+  }
+  
+  /* Podcast player specific styles */
+  .podcast-controls {
+    @apply flex items-center space-x-2 justify-center;
+  }
+  
+  .podcast-progress {
+    @apply h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden;
+  }
+  
+  .podcast-progress-bar {
+    @apply h-full bg-primary rounded-full transition-all duration-300;
+  }
+}
+
+/* Prose dark mode adjustments */
+.dark .prose {
+  @apply prose-headings:text-gray-100 
+         prose-p:text-gray-300 
+         prose-a:text-blue-400 
+         prose-strong:text-gray-200
+         prose-ul:text-gray-300
+         prose-ol:text-gray-300
+         prose-blockquote:text-gray-300
+         prose-code:text-purple-300
+         prose-pre:bg-gray-800;
+}
+
+/* Additional responsive utilities */
+@media (max-width: 640px) {
+  .sm-hide {
+    display: none;
+  }
+  
+  .sm-full {
+    width: 100%;
+  }
+  
+  .sm-stack {
+    flex-direction: column;
+  }
+}
+
+/* Animations for feedback */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
