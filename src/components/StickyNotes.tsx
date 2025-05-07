@@ -17,13 +17,13 @@ interface StickyNotesProps {
   postId: string;
 }
 
-// Available colors for sticky notes
+// Available colors for sticky notes with improved dark mode visibility
 const noteColors = [
-  'bg-yellow-100 dark:bg-yellow-900/40',
-  'bg-blue-100 dark:bg-blue-900/40',
-  'bg-pink-100 dark:bg-pink-900/40',
-  'bg-green-100 dark:bg-green-900/40',
-  'bg-purple-100 dark:bg-purple-900/40',
+  'bg-yellow-100 dark:bg-yellow-900/60 text-yellow-900 dark:text-yellow-100',
+  'bg-blue-100 dark:bg-blue-900/60 text-blue-900 dark:text-blue-100',
+  'bg-pink-100 dark:bg-pink-900/60 text-pink-900 dark:text-pink-100',
+  'bg-green-100 dark:bg-green-900/60 text-green-900 dark:text-green-100',
+  'bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-100',
 ];
 
 export function StickyNotes({ postId }: StickyNotesProps) {
@@ -85,7 +85,7 @@ export function StickyNotes({ postId }: StickyNotesProps) {
         <Button
           size="icon"
           variant="outline"
-          className={`rounded-full shadow-md ${showNotes ? 'bg-primary text-white' : ''}`}
+          className={`rounded-full shadow-md ${showNotes ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border-border'}`}
           onClick={toggleNotesVisibility}
           title={showNotes ? "Hide notes" : "Show notes"}
         >
@@ -96,7 +96,7 @@ export function StickyNotes({ postId }: StickyNotesProps) {
           <Button
             size="icon"
             variant="outline"
-            className="rounded-full shadow-md"
+            className="rounded-full shadow-md bg-background text-foreground border-border hover:bg-primary/10"
             onClick={addNote}
             title="Add new note"
           >
@@ -117,7 +117,7 @@ export function StickyNotes({ postId }: StickyNotesProps) {
             <Button
               size="icon"
               variant="ghost"
-              className="h-6 w-6 text-gray-700 dark:text-gray-300 hover:bg-transparent"
+              className="h-6 w-6 hover:bg-transparent hover:text-foreground"
               onClick={() => deleteNote(note.id)}
             >
               <X className="h-4 w-4" />
@@ -127,7 +127,7 @@ export function StickyNotes({ postId }: StickyNotesProps) {
             value={note.content}
             onChange={(e) => updateNote(note.id, e.target.value)}
             placeholder="Write your note here..."
-            className="min-h-[100px] bg-transparent border-gray-300 dark:border-gray-600"
+            className={`min-h-[100px] bg-transparent border-gray-300 dark:border-gray-600 ${isDark ? 'text-foreground placeholder:text-gray-400' : 'text-foreground'}`}
           />
         </div>
       ))}

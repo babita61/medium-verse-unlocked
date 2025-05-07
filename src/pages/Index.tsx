@@ -12,7 +12,7 @@ const Index = () => {
   const { isDark } = useTheme();
 
   return (
-    <div className={`min-h-screen flex flex-col ${isDark ? 'dark-theme' : 'light-theme'}`}>
+    <div className={`min-h-screen flex flex-col ${isDark ? 'dark-theme bg-background text-foreground' : 'light-theme bg-background text-foreground'}`}>
       <Navbar />
       <main className="flex-grow">
         <Hero />

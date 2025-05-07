@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +14,9 @@ import { Heart, MessageSquare, Bookmark, BookmarkCheck, Headphones } from "lucid
 import PodcastPlayer from "@/components/PodcastPlayer";
 import StickyNotes from "@/components/StickyNotes";
 import MoodSelector from "@/components/MoodSelector";
+import AISummary from "@/components/AISummary";
+import RelatedPosts from "@/components/RelatedPosts";
+import SubscribeForm from "@/components/SubscribeForm";
 
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,6 +29,7 @@ const PostPage = () => {
   const [likesCount, setLikesCount] = useState(0);
   const [sanitizedContent, setSanitizedContent] = useState("");
   const [showPodcastPlayer, setShowPodcastPlayer] = useState(false);
+  const [showSubscribeForm, setShowSubscribeForm] = useState(false);
 
   const { data: post, isLoading: loadingPost } = useQuery({
     queryKey: ["post", slug],
@@ -46,6 +49,20 @@ const PostPage = () => {
       return data as Post;
     },
     enabled: !!slug,
+  });
+
+  // Fetch categories for subscribe form
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .order("name");
+      
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   // Sanitize content when post loads
@@ -292,6 +309,10 @@ const PostPage = () => {
     setShowPodcastPlayer(prev => !prev);
   };
 
+  const toggleSubscribeForm = () => {
+    setShowSubscribeForm(prev => !prev);
+  };
+
   if (loadingPost) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -334,21 +355,24 @@ const PostPage = () => {
       <main className="flex-grow py-10">
         <article className="container mx-auto max-w-4xl px-4">
           <header className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
-            <div className="flex items-center text-gray-600 text-sm mb-4">
-              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+            <h1 className="text-3xl font-bold mb-2 text-foreground">{post?.title}</h1>
+            <div className="flex items-center text-muted-foreground text-sm mb-4">
+              <span>{new Date(post?.created_at || "").toLocaleDateString()}</span>
               <span className="mx-2">•</span>
-              <span>{post.read_time} min read</span>
+              <span>{post?.read_time} min read</span>
               <span className="mx-2">•</span>
               <span>
-                {post.category ? post.category.name : "Uncategorized"}
+                {post?.category ? post.category.name : "Uncategorized"}
               </span>
             </div>
             
+            {/* AI Summary Button */}
+            {post?.content && <AISummary postContent={post.content} />}
+            
             {/* Mood selector */}
-            <div className="mb-4 border-t border-b py-3 border-gray-100 dark:border-gray-800">
-              <p className="text-center text-sm text-gray-500 mb-2">Reading experience:</p>
-              <MoodSelector postId={post.id} />
+            <div className="mb-4 border-t border-b py-3 border-border">
+              <p className="text-center text-sm text-muted-foreground mb-2">Reading experience:</p>
+              <MoodSelector postId={post?.id || ""} />
             </div>
 
             {/* Engagement buttons */}
@@ -383,16 +407,26 @@ const PostPage = () => {
               {/* Listen as podcast button */}
               <button
                 onClick={togglePodcastPlayer}
-                className="flex items-center gap-1 text-gray-500 hover:text-purple-500 ml-auto"
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
                 aria-expanded={showPodcastPlayer}
                 aria-controls="podcast-player"
               >
                 <Headphones className="h-5 w-5" />
                 <span className="sm:inline hidden">Listen as podcast</span>
               </button>
+
+              {/* Subscribe button */}
+              <Button
+                variant="outline" 
+                size="sm"
+                onClick={toggleSubscribeForm}
+                className="ml-auto border-primary/30 hover:border-primary"
+              >
+                Subscribe to updates
+              </Button>
             </div>
 
-            {post.cover_image && (
+            {post?.cover_image && (
               <div className="aspect-video w-full mb-6 rounded-lg overflow-hidden">
                 <img
                   src={post.cover_image}
@@ -409,19 +443,34 @@ const PostPage = () => {
                 className="mb-8 animate-fade-in"
               >
                 <PodcastPlayer 
-                  content={post.content} 
-                  title={post.title}
+                  content={post?.content || ""} 
+                  title={post?.title || ""}
                 />
               </div>
             )}
           </header>
 
           <div 
-            className="prose max-w-none" 
+            className="prose dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground max-w-none" 
             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
 
-          <div className="mt-10 pt-8 border-t border-gray-200">
+          {/* Subscribe form modal */}
+          {showSubscribeForm && categories && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-background max-w-md w-full mx-4 rounded-lg">
+                <div className="p-4 border-b border-border flex justify-between items-center">
+                  <h3 className="font-medium">Subscribe to Updates</h3>
+                  <Button size="sm" variant="ghost" onClick={toggleSubscribeForm}>✕</Button>
+                </div>
+                <div className="p-4">
+                  <SubscribeForm categories={categories} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-10 pt-8 border-t border-muted">
             <div className="flex items-center mb-6">
               {post.author?.avatar_url ? (
                 <img
@@ -507,6 +556,16 @@ const PostPage = () => {
             )}
           </div>
         </article>
+        
+        {/* Related posts */}
+        <div className="container mx-auto max-w-4xl px-4 mt-16">
+          {post && (
+            <RelatedPosts 
+              currentPostId={post.id} 
+              currentPostContent={post.content || ""}
+            />
+          )}
+        </div>
         
         {/* Add sticky notes feature */}
         {post && <StickyNotes postId={post.id} />}

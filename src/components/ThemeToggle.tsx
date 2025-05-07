@@ -20,7 +20,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn("relative", className)}
+          className={cn("relative text-foreground", className)}
           aria-label="Toggle theme"
         >
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-transform duration-500 dark:-rotate-90 dark:scale-0" />
@@ -28,10 +28,10 @@ export function ThemeToggle({ className }: { className?: string }) {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="animate-fade-in">
+      <DropdownMenuContent align="end" className="animate-fade-in bg-background border-border">
         <DropdownMenuItem 
           onClick={() => setTheme("light")}
-          className={theme === "light" ? "bg-accent" : ""}
+          className={theme === "light" ? "bg-accent text-accent-foreground" : "text-foreground"}
         >
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
@@ -39,7 +39,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => setTheme("dark")}
-          className={theme === "dark" ? "bg-accent" : ""}
+          className={theme === "dark" ? "bg-accent text-accent-foreground" : "text-foreground"}
         >
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
@@ -47,7 +47,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={() => setTheme("system")}
-          className={theme === "system" ? "bg-accent" : ""}
+          className={theme === "system" ? "bg-accent text-accent-foreground" : "text-foreground"}
         >
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
