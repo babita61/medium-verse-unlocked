@@ -4,3 +4,6 @@ project_id = "<your-project-id>"
 
 [functions.ai-helper]
 verify_jwt = true
+
+[functions.handle-subscription]
+verify_jwt = false

@@ -1,29 +1,27 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Post, Comment } from "@/types";
-import DOMPurify from "dompurify"; // You'll need to install this: npm install dompurify
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/sonner";
 import { useAuth } from "@/context/AuthContext";
-import { Heart, MessageSquare, Bookmark, BookmarkCheck, Headphones } from "lucide-react";
+import DOMPurify from "dompurify";
 import PodcastPlayer from "@/components/PodcastPlayer";
 import StickyNotes from "@/components/StickyNotes";
-import MoodSelector from "@/components/MoodSelector";
-import AISummary from "@/components/AISummary";
 import RelatedPosts from "@/components/RelatedPosts";
 import SubscribeForm from "@/components/SubscribeForm";
+import PostHeader from "@/components/post/PostHeader";
+import AuthorSection from "@/components/post/AuthorSection";
+import CommentSection from "@/components/post/CommentSection";
+import { Post } from "@/types";
 
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
-  const [commentContent, setCommentContent] = useState("");
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
@@ -129,61 +127,6 @@ const PostPage = () => {
     enabled: !!post,
   });
 
-  const { data: comments, isLoading: loadingComments } = useQuery({
-    queryKey: ["post-comments", slug],
-    queryFn: async () => {
-      if (!post) return [];
-
-      const { data, error } = await supabase
-        .from("comments")
-        .select(`
-          *,
-          user:profiles(*)
-        `)
-        .eq("post_id", post.id)
-        .is("parent_id", null)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      return data as Comment[];
-    },
-    enabled: !!post,
-  });
-
-  // Mutation to add a comment
-  const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      if (!user) throw new Error("You must be logged in to comment");
-      if (!post) throw new Error("Post not found");
-      if (!content.trim()) throw new Error("Comment cannot be empty");
-
-      const { error, data } = await supabase
-        .from("comments")
-        .insert([
-          {
-            post_id: post.id,
-            user_id: user.id,
-            content,
-          },
-        ])
-        .select(`
-          *,
-          user:profiles(*)
-        `);
-
-      if (error) throw error;
-      return data[0] as Comment;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["post-comments", slug] });
-      setCommentContent("");
-      toast.success("Comment added successfully");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to add comment");
-    },
-  });
-
   // Mutation to toggle bookmark
   const toggleBookmarkMutation = useMutation({
     mutationFn: async () => {
@@ -276,27 +219,11 @@ const PostPage = () => {
     },
   });
 
-  const handleAddComment = () => {
-    if (commentContent.trim()) {
-      addCommentMutation.mutate(commentContent);
-    } else {
-      toast.error("Comment cannot be empty");
-    }
-  };
-
   const handleToggleBookmark = () => {
-    if (!user) {
-      toast.error("Please sign in to bookmark posts");
-      return;
-    }
     toggleBookmarkMutation.mutate();
   };
 
   const handleToggleLike = () => {
-    if (!user) {
-      toast.error("Please sign in to like posts");
-      return;
-    }
     toggleLikeMutation.mutate();
   };
 
@@ -318,13 +245,13 @@ const PostPage = () => {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow py-10">
-          <div className="container-blog mx-auto max-w-4xl px-4 animate-pulse">
-            <div className="h-8 w-2/3 bg-gray-200 rounded mb-4"></div>
-            <div className="h-4 w-1/3 bg-gray-200 rounded mb-8"></div>
-            <div className="h-64 bg-gray-100 rounded mb-8"></div>
+          <div className="container mx-auto max-w-4xl px-4 animate-pulse">
+            <div className="h-8 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+            <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-8"></div>
+            <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded mb-8"></div>
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-4 bg-gray-200 rounded w-full"></div>
+                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
               ))}
             </div>
           </div>
@@ -354,101 +281,32 @@ const PostPage = () => {
       <Navbar />
       <main className="flex-grow py-10">
         <article className="container mx-auto max-w-4xl px-4">
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-foreground">{post?.title}</h1>
-            <div className="flex items-center text-muted-foreground text-sm mb-4">
-              <span>{new Date(post?.created_at || "").toLocaleDateString()}</span>
-              <span className="mx-2">•</span>
-              <span>{post?.read_time} min read</span>
-              <span className="mx-2">•</span>
-              <span>
-                {post?.category ? post.category.name : "Uncategorized"}
-              </span>
+          <PostHeader 
+            post={post}
+            isBookmarked={isBookmarked}
+            isLiked={isLiked}
+            likesCount={likesCount}
+            commentsCount={0} // This will be updated from CommentSection
+            onToggleBookmark={handleToggleBookmark}
+            onToggleLike={handleToggleLike}
+            onScrollToComments={scrollToComments}
+            onTogglePodcastPlayer={togglePodcastPlayer}
+            onToggleSubscribeForm={toggleSubscribeForm}
+            showPodcastPlayer={showPodcastPlayer}
+          />
+
+          {/* Podcast player */}
+          {showPodcastPlayer && (
+            <div 
+              id="podcast-player" 
+              className="mb-8 animate-fade-in"
+            >
+              <PodcastPlayer 
+                content={post?.content || ""} 
+                title={post?.title || ""}
+              />
             </div>
-            
-            {/* AI Summary Button */}
-            {post?.content && <AISummary postContent={post.content} />}
-            
-            {/* Mood selector */}
-            <div className="mb-4 border-t border-b py-3 border-border">
-              <p className="text-center text-sm text-muted-foreground mb-2">Reading experience:</p>
-              <MoodSelector postId={post?.id || ""} />
-            </div>
-
-            {/* Engagement buttons */}
-            <div className="flex flex-wrap items-center gap-5 mb-4">
-              <button 
-                onClick={handleToggleLike}
-                className={`flex items-center gap-1 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}
-              >
-                <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-500' : 'fill-none'}`} />
-                <span>{likesCount}</span>
-              </button>
-              
-              <button 
-                onClick={scrollToComments}
-                className="flex items-center gap-1 text-gray-500 hover:text-blue-500"
-              >
-                <MessageSquare className="h-5 w-5" />
-                <span>{comments?.length || 0}</span>
-              </button>
-              
-              <button 
-                onClick={handleToggleBookmark}
-                className={`flex items-center gap-1 ${isBookmarked ? 'text-blue-500' : 'text-gray-500'} hover:text-blue-500`}
-              >
-                {isBookmarked ? (
-                  <BookmarkCheck className="h-5 w-5" />
-                ) : (
-                  <Bookmark className="h-5 w-5" />
-                )}
-              </button>
-
-              {/* Listen as podcast button */}
-              <button
-                onClick={togglePodcastPlayer}
-                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-                aria-expanded={showPodcastPlayer}
-                aria-controls="podcast-player"
-              >
-                <Headphones className="h-5 w-5" />
-                <span className="sm:inline hidden">Listen as podcast</span>
-              </button>
-
-              {/* Subscribe button */}
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={toggleSubscribeForm}
-                className="ml-auto border-primary/30 hover:border-primary"
-              >
-                Subscribe to updates
-              </Button>
-            </div>
-
-            {post?.cover_image && (
-              <div className="aspect-video w-full mb-6 rounded-lg overflow-hidden">
-                <img
-                  src={post.cover_image}
-                  alt={post.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            {/* Podcast player */}
-            {showPodcastPlayer && (
-              <div 
-                id="podcast-player" 
-                className="mb-8 animate-fade-in"
-              >
-                <PodcastPlayer 
-                  content={post?.content || ""} 
-                  title={post?.title || ""}
-                />
-              </div>
-            )}
-          </header>
+          )}
 
           <div 
             className="prose dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground max-w-none" 
@@ -461,7 +319,7 @@ const PostPage = () => {
               <div className="bg-background max-w-md w-full mx-4 rounded-lg">
                 <div className="p-4 border-b border-border flex justify-between items-center">
                   <h3 className="font-medium">Subscribe to Updates</h3>
-                  <Button size="sm" variant="ghost" onClick={toggleSubscribeForm}>✕</Button>
+                  <button className="p-1" onClick={toggleSubscribeForm}>✕</button>
                 </div>
                 <div className="p-4">
                   <SubscribeForm categories={categories} />
@@ -471,89 +329,8 @@ const PostPage = () => {
           )}
 
           <div className="mt-10 pt-8 border-t border-muted">
-            <div className="flex items-center mb-6">
-              {post.author?.avatar_url ? (
-                <img
-                  src={post.author.avatar_url}
-                  alt={post.author.full_name || post.author.username}
-                  className="w-10 h-10 rounded-full mr-4"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-200 mr-4"></div>
-              )}
-              <div>
-                <p className="font-medium">
-                  {post.author?.full_name || post.author?.username || "Unknown Author"}
-                </p>
-              </div>
-            </div>
-            
-            <h3 className="text-xl font-bold mb-6">Comments</h3>
-            
-            {user ? (
-              <div className="mb-8">
-                <Textarea
-                  ref={commentInputRef}
-                  placeholder="Add your comment..."
-                  className="min-h-28 mb-2"
-                  value={commentContent}
-                  onChange={(e) => setCommentContent(e.target.value)}
-                />
-                <Button 
-                  onClick={handleAddComment} 
-                  disabled={addCommentMutation.isPending || !commentContent.trim()}
-                >
-                  {addCommentMutation.isPending ? "Posting..." : "Post Comment"}
-                </Button>
-              </div>
-            ) : (
-              <div className="bg-gray-50 p-4 rounded-md mb-8">
-                <p className="text-gray-600">Please sign in to leave a comment.</p>
-              </div>
-            )}
-            
-            {loadingComments ? (
-              <div className="animate-pulse space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
-                    <div className="flex-1">
-                      <div className="h-4 w-1/4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-10 bg-gray-100 rounded w-full"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : comments && comments.length > 0 ? (
-              <div className="space-y-6">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="border-b border-gray-100 pb-4">
-                    <div className="flex items-center mb-2">
-                      <div className="h-8 w-8 rounded-full bg-gray-200 overflow-hidden mr-2">
-                        {comment.user?.avatar_url && (
-                          <img
-                            src={comment.user.avatar_url}
-                            alt={comment.user?.username}
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                      </div>
-                      <div>
-                        <span className="font-medium">
-                          {comment.user?.full_name || comment.user?.username}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-2">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-gray-700">{comment.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No comments yet. Be the first to comment!</p>
-            )}
+            <AuthorSection author={post.author} />
+            <CommentSection post={post} commentInputRef={commentInputRef} />
           </div>
         </article>
         

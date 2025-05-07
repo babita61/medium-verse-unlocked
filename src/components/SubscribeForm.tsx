@@ -49,55 +49,20 @@ const SubscribeForm = ({ categories }: SubscribeFormProps) => {
         return;
       }
 
-      // First check if this email is already subscribed
-      const { data: existingSubscription } = await supabase
-        .from("subscriptions")
-        .select("id, user_id")
-        .eq("email", subscriptionEmail)
-        .single();
+      // Call the Supabase function to handle subscription
+      const { data, error } = await supabase.functions.invoke("handle-subscription", {
+        body: {
+          email: subscriptionEmail,
+          userId: user?.id || null,
+          categoryIds: selectedCategories
+        }
+      });
 
-      if (existingSubscription) {
-        // Update existing subscription
-        await supabase
-          .from("subscription_categories")
-          .delete()
-          .eq("subscription_id", existingSubscription.id);
+      if (error) throw error;
 
-        // Add new category selections
-        const categoryData = selectedCategories.map(categoryId => ({
-          subscription_id: existingSubscription.id,
-          category_id: categoryId
-        }));
-
-        await supabase
-          .from("subscription_categories")
-          .insert(categoryData);
-
+      if (data.updated) {
         toast.success("Your subscription preferences have been updated!");
       } else {
-        // Create new subscription
-        const { data: subscription, error } = await supabase
-          .from("subscriptions")
-          .insert({
-            email: subscriptionEmail,
-            user_id: user?.id || null,
-            created_at: new Date().toISOString()
-          })
-          .select("id")
-          .single();
-
-        if (error) throw error;
-
-        // Add category selections
-        const categoryData = selectedCategories.map(categoryId => ({
-          subscription_id: subscription.id,
-          category_id: categoryId
-        }));
-
-        await supabase
-          .from("subscription_categories")
-          .insert(categoryData);
-
         toast.success("You've successfully subscribed!");
         
         if (!user) {
