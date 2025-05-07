@@ -44,14 +44,16 @@ const AISummary = ({ postContent }: AISummaryProps) => {
         }
       });
 
-      if (!response.data) {
-        console.error("Invalid response structure:", response);
-        throw new Error("Failed to generate summary: Invalid response");
+      console.log("AI summary response:", response);
+
+      if (!response.data && response.error) {
+        console.error("Summary error:", response.error);
+        throw new Error(response.error.message || "Failed to generate summary");
       }
 
-      if (response.error) {
-        console.error("Summary error:", response.error);
-        throw new Error(response.error.message);
+      if (!response.data || response.data.result === undefined) {
+        console.error("Invalid response structure:", response);
+        throw new Error("Failed to generate summary: Invalid response structure");
       }
       
       setSummary(response.data.result || "No summary available");

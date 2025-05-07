@@ -61,31 +61,39 @@ const RelatedPosts = ({ currentPostId, currentPostContent }: RelatedPostsProps) 
         // Get content excerpt, no more than 2000 chars to avoid API limits
         const postContentExcerpt = currentPostContent.substring(0, 2000);
 
-        // Call Supabase Edge Function for related posts
-        const response = await supabase.functions.invoke("ai-helper", {
-          body: {
-            action: "related",
-            content: postContentExcerpt,
-            additionalData: {
-              allPostTitles,
-              allPostContents,
-              allPostSlugs
+        try {
+          // Call Supabase Edge Function for related posts
+          const response = await supabase.functions.invoke("ai-helper", {
+            body: {
+              action: "related",
+              content: postContentExcerpt,
+              additionalData: {
+                allPostTitles,
+                allPostContents,
+                allPostSlugs
+              }
             }
-          }
-        });
+          });
 
-        if (response.error) throw new Error(response.error.message);
+          if (response.error) throw new Error(response.error.message);
+          if (!response.data || !response.data.result) throw new Error("Invalid response from AI helper");
 
-        const relatedIndices = response.data?.result || [];
-        console.log("Related posts indices:", relatedIndices);
-        
-        // Map the indices to actual posts
-        const relatedPostsData = relatedIndices
-          .map((index: number) => allPosts[index])
-          .filter(Boolean)
-          .slice(0, 3);
+          const relatedIndices = response.data.result || [];
+          console.log("Related posts indices:", relatedIndices);
+          
+          // Map the indices to actual posts
+          const relatedPostsData = relatedIndices
+            .map((index: number) => allPosts[index])
+            .filter(Boolean)
+            .slice(0, 3);
 
-        setRelatedPosts(relatedPostsData);
+          setRelatedPosts(relatedPostsData);
+        } catch (aiError) {
+          console.error("Error with AI related posts:", aiError);
+          // Fallback to most recent posts
+          setRelatedPosts(allPosts.slice(0, 3));
+          // Silent fallback, don't show an error toast as we're showing content anyway
+        }
       } catch (error: any) {
         console.error("Error fetching related posts:", error);
         // Fallback to most recent posts if AI fails

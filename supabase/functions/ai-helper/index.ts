@@ -30,7 +30,6 @@ serve(async (req) => {
 
     // Different prompts based on the action
     let prompt = "";
-    let apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
     
     if (action === "summarize") {
       prompt = `Summarize the following blog post in 3-4 concise bullet points, highlighting the key takeaways. Keep it under 200 words total:
@@ -51,9 +50,10 @@ serve(async (req) => {
       Return ONLY a JSON array with the indexes (0-based) of the 3 most related posts, like [0, 3, 5]. Do not include any explanations or other text.`;
     }
 
-    console.log(`Sending request to Gemini API for action: ${action}`);
+    console.log(`Sending request to Gemini AI for action: ${action}`);
     
-    const response = await fetch(apiUrl, {
+    // Updated to use the Gemini generative API correctly
+    const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,11 +88,18 @@ serve(async (req) => {
     let result;
 
     if (action === "summarize") {
-      result = data.candidates[0].content.parts[0].text;
+      result = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      // Check if we got a valid result
+      if (!result) {
+        console.error("Invalid Gemini API response structure:", data);
+        throw new Error("Failed to extract summary from Gemini response");
+      }
+      
       console.log("Generated summary:", result.substring(0, 100) + "...");
     } 
     else if (action === "related") {
-      const rawText = data.candidates[0].content.parts[0].text;
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       console.log("Raw related posts response:", rawText);
       
       try {
