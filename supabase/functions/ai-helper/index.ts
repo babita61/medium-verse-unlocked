@@ -5,7 +5,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 const GEMINI_API_KEY = "AIzaSyBtwam1oTcFUgh8QzGHadeWwnSawXaPe0o";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "*", // Allow all origins - you can restrict this to your specific domains
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -50,7 +50,7 @@ serve(async (req) => {
       Return ONLY a JSON array with the indexes (0-based) of the 3 most related posts, like [0, 3, 5]. Do not include any explanations or other text.`;
     }
 
-    console.log(`Sending request to Gemini AI for action: ${action}`);
+    console.log(`Sending request to Gemini API for action: ${action}`);
     
     // Updated to use the Gemini generative API correctly
     const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent", {
@@ -79,9 +79,9 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.text();
       console.error("Gemini API error:", errorData);
-      throw new Error(`Gemini API error: ${JSON.stringify(errorData)}`);
+      throw new Error(`Gemini API error: ${errorData}`);
     }
 
     const data = await response.json();
